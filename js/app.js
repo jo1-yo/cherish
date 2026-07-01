@@ -4,6 +4,13 @@
    State persists in the browser via localStorage.
    =========================================================== */
 
+/* ---------- Payments config ----------
+   Set this to your deployed Vercel URL (e.g. 'https://cherish-xxxx.vercel.app')
+   to turn on real Stripe checkout. While it's left as the placeholder, "Place
+   Order" uses the demo flow (no real charge) so the live site keeps working. */
+window.CHECKOUT_API = 'https://YOUR-PROJECT.vercel.app';
+function checkoutEnabled(){ return window.CHECKOUT_API && !/YOUR-PROJECT/.test(window.CHECKOUT_API); }
+
 /* ---------- Product catalogue (The Shimmer Collection) ---------- */
 let PRODUCTS = [
   { id:'stardust', name:'Stardust Skirt', cat:'bottoms', price:265, img:'images/look-05.jpg',
