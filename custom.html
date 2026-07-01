@@ -19,13 +19,29 @@
   <div class="wrap">
     <div class="builder">
 
-      <!-- PREVIEW (3D viewer under development — emoji placeholder for now) -->
+      <!-- PREVIEW — updates live with the choices on the right -->
       <div class="preview-stage">
-        <div class="preview-3d static" id="stage">
-          <div class="preview-emoji" role="img" aria-label="3D preview placeholder">🧊</div>
-          <div class="preview-dev"><b>3D preview — under development</b>Live drag-to-rotate is coming soon</div>
+        <div class="preview-3d" id="stage">
+          <svg class="skirt-svg" id="skirt" viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">
+            <g id="skirtGroup">
+              <!-- Layer 1: undershorts -->
+              <path id="L1" d="M72 120 H128 L134 196 H104 L100 170 L96 196 H66 Z" fill="#d9cdb6"/>
+              <!-- Layer 2: skirt body -->
+              <path id="L2" d="M66 116 H134 L168 252 H32 Z" fill="#c9b78f"/>
+              <!-- waistband / rise -->
+              <rect id="WB" x="66" y="102" width="68" height="16" rx="2" fill="#b29a68"/>
+              <!-- Layer 3: sparkle hem -->
+              <path id="L3" d="M32 252 H168 L174 272 H26 Z" fill="#e7c873"/>
+              <g id="sparkles" fill="#fff8e1">
+                <circle cx="52" cy="262" r="2.4"/><circle cx="84" cy="265" r="1.7"/>
+                <circle cx="116" cy="263" r="2.1"/><circle cx="146" cy="266" r="1.9"/>
+                <circle cx="100" cy="260" r="1.6"/>
+              </g>
+            </g>
+          </svg>
+          <div class="spin-hint">↺ Drag to rotate · Live made-to-order preview</div>
         </div>
-        <p class="muted center" style="font-size:.82rem;margin-top:16px">Each layer is 3D-scanned and isolated, then cut in your chosen fabric.</p>
+        <p class="muted center" style="font-size:.82rem;margin-top:16px">Each layer updates live as you choose the fabric, rise and size.</p>
       </div>
 
       <!-- CONFIGURATOR -->
@@ -143,12 +159,26 @@
     </div>`).join('');
 
   function paint(){
+    // fabric colours + labels, per layer
     Object.entries(FABRICS).forEach(([key,L])=>{
       const o=L.opts[state.fabric[key]];
-      document.getElementById(L.svg)?.setAttribute('fill',o.c);   // SVG preview may be absent (placeholder)
+      document.getElementById(L.svg)?.setAttribute('fill',o.c);
       const lbl=document.getElementById('lbl-'+key); if(lbl) lbl.textContent=o.n;
     });
-    document.getElementById('WB')?.setAttribute('fill', state.rise==='High Rise'?'#b29a68':'#c2ad7e');
+    // rise → waistband height & position
+    const wb=document.getElementById('WB');
+    if(wb){
+      const high = state.rise==='High Rise';
+      wb.setAttribute('y', high?96:110);
+      wb.setAttribute('height', high?22:12);
+      wb.setAttribute('fill', high?'#b29a68':'#c2ad7e');
+    }
+    // size → overall width, scaled about the centre (x=100)
+    const g=document.getElementById('skirtGroup');
+    if(g){
+      const scale={XS:0.86,S:0.94,M:1.0,L:1.09}[state.size] || 1;
+      g.setAttribute('transform',`translate(100 0) scale(${scale} 1) translate(-100 0)`);
+    }
   }
   function calc(){
     let fab=0; Object.entries(FABRICS).forEach(([k,L])=>fab+=L.opts[state.fabric[k]].add);

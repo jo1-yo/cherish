@@ -85,6 +85,7 @@ function renderHeader(active){
     <div class="nav">
       <button class="menu-toggle" aria-label="Menu" onclick="menuClick()">${I.menu}</button>
       <nav class="nav-center" id="navlinks">
+        <button class="nav-close" aria-label="Close menu" onclick="menuClick()">&times;</button>
         <a href="about.html"  class="${active==='about'?'active':''}">About</a>
         <a href="shop.html"   class="${active==='shop'?'active':''}">Shop</a>
         <a href="index.html" class="brand" aria-label="Cherish — home"><img src="images/logo-wordmark.jpg" alt="Cherish"></a>
