@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Favorites — CHERISH</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="site-head"></div>
+
+<div class="wrap page-hero"><p class="eyebrow">Saved</p><h1>Favorites</h1>
+  <p class="muted" style="margin-top:12px">The pieces you've loved, kept in one place.</p></div>
+
+<section style="padding-top:30px">
+  <div class="wrap">
+    <div class="grid" id="fav-grid"></div>
+    <div class="empty" id="empty" style="display:none">
+      <h2>No favorites yet</h2>
+      <p class="muted">Tap the heart on any piece to save it here.</p>
+      <a href="shop.html" class="btn">Browse the Collection</a>
+    </div>
+  </div>
+</section>
+
+<div id="site-foot"></div>
+<script src="js/app.js"></script>
+<script>
+  renderHeader('shop'); renderFooter();
+  if(!Auth.in()){ location.href='login.html?next=favorites.html'; }
+  function render(){
+    const favs=Fav.all().map(id=>PRODUCTS.find(p=>p.id===id)).filter(Boolean);
+    const grid=document.getElementById('fav-grid');
+    if(favs.length){ grid.innerHTML=favs.map(productCard).join(''); document.getElementById('empty').style.display='none'; }
+    else { grid.innerHTML=''; document.getElementById('empty').style.display='block'; }
+  }
+  render();
+</script>
+</body>
+</html>

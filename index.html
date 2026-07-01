@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CHERISH — The Shimmer Collection</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="site-head"></div>
+
+<main class="fp-main">
+
+  <!-- PHOTO COLLAGE -->
+  <section class="fp-collage" style="padding-top:30px">
+    <img class="shot" data-img="look-01" src="images/look-01.jpg" alt="Cherish — look in black with sequin bag">
+    <img class="shot" data-img="look-02" src="images/look-02.jpg" alt="Cherish — two looks, pink sequin skirt">
+    <img class="shot" data-img="detail-01" src="images/detail-01.jpg" alt="Cherish — black sequin bag detail">
+    <img class="shot" data-img="detail-02" src="images/detail-02.jpg" alt="Cherish — accessories flatlay">
+    <img class="shot" data-img="look-03" src="images/look-03.jpg" alt="Cherish — evening look with lace skirt">
+    <img class="shot" data-img="still-01" src="images/still-01.jpg" alt="Cherish — sequin bag still life">
+    <img class="shot" data-img="look-04" src="images/look-04.jpg" alt="Cherish — pink sequin skirt look">
+    <img class="shot" data-img="look-05" src="images/look-05.jpg" alt="Cherish — sequin mini skirt on stairs">
+  </section>
+
+  <!-- CATEGORY ROW -->
+  <nav class="fp-cats">
+    <a href="about.html#how-we-work" data-cat="0">Sustainable</a>
+    <a href="about.html#how-we-work" data-cat="1">Ethical</a>
+    <a href="about.html#how-we-work" data-cat="2">Unique</a>
+    <a href="shop.html" data-cat="3">Limited Collection</a>
+  </nav>
+
+  <!-- SUBBAR -->
+  <div class="fp-subbar">
+    <a href="shop.html">Shop the Collection →</a>
+    <a class="faq-link" href="shop.html#faq">Frequently Asked Questions</a>
+  </div>
+
+  <!-- MORE PICTURES -->
+  <section class="fp-strip">
+    <div class="strip-head">
+      <p class="eyebrow">More Pictures</p>
+      <span>The Shimmer Collection</span>
+    </div>
+    <div class="strip-row">
+      <div class="strip-slot filled"><img data-img="more-01" src="images/more-01.jpg" alt="Cherish — black lace midi skirt with red top-handle bag"></div>
+      <div class="strip-slot filled"><img data-img="more-02" src="images/more-02.jpg" alt="Cherish — high-rise floral sequin skirt"></div>
+      <div class="strip-slot filled"><img data-img="more-03" src="images/more-03.jpg" alt="Cherish — pink sequin mini skirt with tailored coat"></div>
+      <div class="strip-slot filled"><img data-img="more-04" src="images/more-04.jpg" alt="Cherish — the collection styled two ways"></div>
+      <div class="strip-slot filled"><img data-img="more-05" src="images/more-05.jpg" alt="Cherish — low-rise floral sequin skirt"></div>
+    </div>
+  </section>
+
+  <!-- SLIM FOOTER -->
+  <div class="fp-foot">
+    <div class="links">
+      <a href="info.html#size-chart">Size Chart</a>
+      <a href="info.html#shipping">Shipping</a>
+      <a href="info.html#terms">Terms of Service</a>
+      <a href="info.html#privacy">Privacy Policy</a>
+    </div>
+    <div class="contact">
+      <a href="info.html#contact">Contact Us</a>
+      <span>New York, NY</span>
+    </div>
+  </div>
+
+</main>
+
+<script src="js/app.js"></script>
+<script>
+  renderHeader('home');
+  applyHomeContent();   // apply any admin overrides (category words + photos)
+  // FAQ anchor: send shop.html#faq to the FAQ block
+</script>
+</body>
+</html>

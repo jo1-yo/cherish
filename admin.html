@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cherish · Admin</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  body{background:var(--ivory)}
+  .adm-top{display:flex;justify-content:space-between;align-items:center;padding:20px 32px;border-bottom:1px solid var(--ink)}
+  .adm-top .logo{font-family:'Allura','Pinyon Script',cursive;font-size:2.4rem}
+  .adm-top .tag{font-family:var(--sans);font-size:.66rem;letter-spacing:.28em;text-transform:uppercase;color:var(--gold-deep)}
+  .adm-wrap{max-width:1100px;margin:0 auto;padding:30px 32px 80px}
+  .adm-tabs{display:flex;gap:8px;margin-bottom:30px;flex-wrap:wrap}
+  .adm-tab{font-family:var(--sans);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;
+    padding:11px 20px;border:1px solid var(--line);background:var(--white);transition:.25s}
+  .adm-tab.active{background:var(--ink);color:var(--ivory);border-color:var(--ink)}
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:36px}
+  .kpi{background:var(--white);border:1px solid var(--line);padding:22px}
+  .kpi .n{font-family:var(--serif);font-size:2.4rem;line-height:1}
+  .kpi .l{font-family:var(--sans);font-size:.66rem;letter-spacing:.18em;text-transform:uppercase;color:var(--soft-ink);margin-top:8px}
+  .panel{display:none}.panel.active{display:block}
+  table{width:100%;border-collapse:collapse;background:var(--white)}
+  th,td{border:1px solid var(--line);padding:11px 13px;text-align:left;font-family:var(--sans);font-size:.86rem;vertical-align:top}
+  th{background:var(--cream);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;font-weight:600}
+  td input,td select{width:100%;border:1px solid var(--line);padding:7px 8px;font-family:var(--sans);font-size:.84rem;background:var(--ivory)}
+  .row-btns{display:flex;gap:6px}
+  .mini{font-family:var(--sans);font-size:.64rem;letter-spacing:.12em;text-transform:uppercase;padding:7px 12px;border:1px solid var(--ink);background:var(--white);transition:.2s}
+  .mini:hover{background:var(--ink);color:var(--ivory)}
+  .mini.danger{border-color:#b01e17;color:#b01e17}
+  .mini.danger:hover{background:#b01e17;color:#fff}
+  .bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+  .bar h2{font-family:var(--serif);font-size:1.8rem}
+  .gate{max-width:360px;margin:90px auto;text-align:center}
+  .gate input{width:100%;border:1px solid var(--line);padding:13px 14px;font-family:var(--sans);margin:18px 0;text-align:center;letter-spacing:.2em}
+  .note{font-family:var(--sans);font-size:.8rem;color:var(--soft-ink);background:var(--cream);border-left:3px solid var(--gold-deep);padding:12px 16px;margin-bottom:24px}
+  .inv{font-size:.82rem;color:var(--soft-ink)}
+  .home-cats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:30px}
+  .home-cats label{display:block;font-family:var(--sans);font-size:.6rem;letter-spacing:.16em;text-transform:uppercase;color:var(--soft-ink);margin-bottom:6px}
+  .home-cats input{width:100%;border:1px solid var(--line);padding:9px 10px;font-family:var(--sans);font-size:.9rem;background:var(--ivory)}
+  .home-group-title{font-family:var(--sans);font-size:.64rem;letter-spacing:.18em;text-transform:uppercase;color:var(--gold-deep);margin:26px 0 12px}
+  .home-imgs{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+  .home-card{border:1px solid var(--line);background:var(--white);padding:10px}
+  .home-card .thumb{width:100%;aspect-ratio:3/4;object-fit:cover;display:block;background:var(--cream);border:1px solid var(--ink)}
+  .home-card .k{font-family:var(--sans);font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;color:var(--soft-ink);margin:8px 0 6px}
+  .home-card input[type=file]{width:100%;font-family:var(--sans);font-size:.68rem}
+  @media(max-width:760px){.cards{grid-template-columns:1fr 1fr}table{font-size:.74rem}
+    .home-cats{grid-template-columns:1fr 1fr}.home-imgs{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+
+<!-- simple passcode gate (prototype only — not real security) -->
+<div id="gate" class="gate">
+  <div class="adm-top" style="border:none;justify-content:center"><span class="logo">Cherish</span></div>
+  <p class="eyebrow">Admin Access</p>
+  <input id="pass" type="password" placeholder="Passcode" onkeydown="if(event.key==='Enter')enter()">
+  <button class="btn block" onclick="enter()">Enter Dashboard</button>
+  <p class="note" style="margin-top:20px;border:none;background:none;text-align:center">Demo passcode: <b>cherish</b></p>
+</div>
+
+<div id="app" style="display:none">
+  <div class="adm-top">
+    <span class="logo">Cherish</span>
+    <span class="tag">Admin Dashboard</span>
+    <a href="index.html" class="link-underline" style="font-size:.68rem">View Site →</a>
+  </div>
+
+  <div class="adm-wrap">
+    <div class="cards" id="kpis"></div>
+
+    <div class="adm-tabs">
+      <button class="adm-tab active" data-p="orders">Orders</button>
+      <button class="adm-tab" data-p="products">Products</button>
+      <button class="adm-tab" data-p="homepage">Homepage</button>
+      <button class="adm-tab" data-p="activity">Customer Activity</button>
+    </div>
+
+    <!-- ORDERS -->
+    <div class="panel active" id="p-orders">
+      <div class="bar"><h2>Orders</h2></div>
+      <div id="orders"></div>
+    </div>
+
+    <!-- PRODUCTS -->
+    <div class="panel" id="p-products">
+      <div class="bar"><h2>Products</h2>
+        <div class="row-btns">
+          <button class="mini" onclick="addRow()">+ Add Product</button>
+          <button class="mini" onclick="saveProducts()">Save Changes</button>
+          <button class="mini danger" onclick="resetProducts()">Reset to Default</button>
+        </div>
+      </div>
+      <p class="note">Edits here update the live storefront (catalogue is saved in this browser). Image is a path like <code>images/look-04.jpg</code> or a full URL.</p>
+      <table><thead><tr><th style="width:90px">ID</th><th>Name</th><th style="width:110px">Category</th><th style="width:90px">Price</th><th>Image</th><th style="width:120px">Sizes</th><th style="width:80px"></th></tr></thead>
+        <tbody id="prows"></tbody></table>
+    </div>
+
+    <!-- HOMEPAGE -->
+    <div class="panel" id="p-homepage">
+      <div class="bar"><h2>Homepage</h2>
+        <div class="row-btns">
+          <button class="mini" onclick="saveHome()">Save Changes</button>
+          <button class="mini danger" onclick="resetHome()">Reset to Default</button>
+        </div>
+      </div>
+      <p class="note">Edit the four category words and swap any homepage photo. Changes save in this browser and update the live homepage. New photos are resized automatically; use JPG or PNG (portrait works best).</p>
+
+      <div class="home-group-title">Category words</div>
+      <div class="home-cats" id="home-cats"></div>
+
+      <div class="home-group-title">Photo collage (top of homepage)</div>
+      <div class="home-imgs" id="home-collage"></div>
+
+      <div class="home-group-title">“More Pictures” strip</div>
+      <div class="home-imgs" id="home-more"></div>
+    </div>
+
+    <!-- ACTIVITY -->
+    <div class="panel" id="p-activity">
+      <div class="bar"><h2>Customer Activity</h2></div>
+      <h3 style="font-family:var(--serif);font-size:1.3rem;margin:10px 0">Saved Favorites</h3>
+      <div id="favs"></div>
+      <h3 style="font-family:var(--serif);font-size:1.3rem;margin:24px 0 10px">Custom Notes &amp; Ideas</h3>
+      <div id="notes"></div>
+      <h3 style="font-family:var(--serif);font-size:1.3rem;margin:24px 0 10px">Custom Build Requests</h3>
+      <div id="customs"></div>
+    </div>
+  </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+  // ---- gate ----
+  function enter(){
+    if(document.getElementById('pass').value.trim().toLowerCase()==='cherish'){
+      sessionStorage.setItem('cherish_admin','1'); show();
+    } else { toast('Incorrect passcode'); }
+  }
+  function show(){ document.getElementById('gate').style.display='none'; document.getElementById('app').style.display='block'; render(); }
+  if(sessionStorage.getItem('cherish_admin')==='1') show();
+
+  // ---- tabs ----
+  document.querySelectorAll('.adm-tab').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('.adm-tab').forEach(x=>x.classList.remove('active')); b.classList.add('active');
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    document.getElementById('p-'+b.dataset.p).classList.add('active');
+  });
+
+  // ---- editable catalogue (starts from current PRODUCTS) ----
+  let cat = JSON.parse(JSON.stringify(PRODUCTS));
+
+  function render(){
+    const orders=DB.get('orders',[]), favs=DB.get('fav',[]), notes=DB.get('notes',[]), customs=DB.get('customs',[]);
+    // KPIs
+    const revenue=orders.reduce((s,o)=>s+(o.total||0),0);
+    document.getElementById('kpis').innerHTML=`
+      <div class="kpi"><div class="n">${orders.length}</div><div class="l">Orders</div></div>
+      <div class="kpi"><div class="n">${fmt(revenue)}</div><div class="l">Revenue</div></div>
+      <div class="kpi"><div class="n">${cat.length}</div><div class="l">Products</div></div>
+      <div class="kpi"><div class="n">${favs.length}</div><div class="l">Favorited</div></div>`;
+
+    // orders
+    const oEl=document.getElementById('orders');
+    oEl.innerHTML = orders.length ? `<table><thead><tr><th>Order</th><th>Date</th><th>Items</th><th>Total</th><th>Status</th><th>Tracking</th><th>Invoice</th></tr></thead><tbody>${
+      orders.map(o=>`<tr>
+        <td><b>${o.id}</b></td><td>${o.date}</td><td>${o.items||(o.lines?o.lines.length:'-')}</td>
+        <td>${fmt(o.total||0)}</td><td>${o.status||'Confirmed'}</td><td>${o.tracking||'—'}</td>
+        <td class="inv">${(o.lines||[]).map(l=>`${l.name} ×${l.qty} — ${fmt(l.price)}`).join('<br>')||'—'}</td>
+      </tr>`).join('')}</tbody></table>` : '<p class="muted">No orders yet.</p>';
+
+    // products table
+    document.getElementById('prows').innerHTML = cat.map((p,i)=>`<tr>
+      <td><input value="${p.id}" onchange="upd(${i},'id',this.value)"></td>
+      <td><input value="${(p.name||'').replace(/"/g,'&quot;')}" onchange="upd(${i},'name',this.value)"></td>
+      <td><select onchange="upd(${i},'cat',this.value)">
+        ${['tops','bottoms','bags'].map(c=>`<option value="${c}" ${p.cat===c?'selected':''}>${c}</option>`).join('')}
+      </select></td>
+      <td><input type="number" value="${p.price}" onchange="upd(${i},'price',+this.value)"></td>
+      <td><input value="${p.img||''}" onchange="upd(${i},'img',this.value)"></td>
+      <td><input value="${(p.sizes||[]).join(', ')}" onchange="updSizes(${i},this.value)"></td>
+      <td><button class="mini danger" onclick="delRow(${i})">Delete</button></td>
+    </tr>`).join('');
+
+    // favorites
+    document.getElementById('favs').innerHTML = favs.length
+      ? favs.map(id=>{const p=cat.find(x=>x.id===id);return `<span class="mini" style="cursor:default;margin:0 6px 6px 0;display:inline-block">${p?p.name:id}</span>`}).join('')
+      : '<p class="muted">None yet.</p>';
+    // notes
+    document.getElementById('notes').innerHTML = notes.length
+      ? notes.map(n=>`<div class="note">${n.text} <span class="muted" style="display:block;font-size:.7rem;margin-top:4px">${n.date}</span></div>`).join('')
+      : '<p class="muted">None yet.</p>';
+    // custom builds
+    document.getElementById('customs').innerHTML = customs.length
+      ? `<table><thead><tr><th>Piece</th><th>Rise</th><th>Size</th><th>Fabrics</th><th>Total</th></tr></thead><tbody>${
+        customs.map(c=>`<tr><td>${c.piece||'Skirt'}</td><td>${c.rise||''}</td><td>${c.size||''}</td><td>${c.fabrics||''}</td><td>${fmt(c.total||0)}</td></tr>`).join('')}</tbody></table>`
+      : '<p class="muted">None yet.</p>';
+  }
+
+  window.upd=(i,k,v)=>{ cat[i][k]=v; };
+  window.updSizes=(i,v)=>{ cat[i].sizes=v.split(',').map(s=>s.trim()).filter(Boolean); };
+  window.addRow=()=>{ cat.push({id:'new-'+Date.now(),name:'New Piece',cat:'bottoms',price:200,img:'images/look-04.jpg',sizes:['XS','S','M','L'],blurb:'A new made-to-order piece.'}); render(); };
+  window.delRow=(i)=>{ cat.splice(i,1); render(); };
+  window.saveProducts=()=>{ DB.set('catalog',cat); toast('Catalogue saved — storefront updated'); };
+  window.resetProducts=()=>{ localStorage.removeItem('cherish_catalog'); toast('Reset — reloading'); setTimeout(()=>location.reload(),700); };
+
+  // ---- homepage editor (category words + photo slots) ----
+  const HOME_COLLAGE=[
+    {key:'look-01',label:'Collage 1'},{key:'look-02',label:'Collage 2'},
+    {key:'detail-01',label:'Collage 3'},{key:'detail-02',label:'Collage 4'},
+    {key:'look-03',label:'Collage 5'},{key:'still-01',label:'Collage 6'},
+    {key:'look-04',label:'Collage 7'},{key:'look-05',label:'Collage 8'},
+  ];
+  const HOME_MORE=[
+    {key:'more-01',label:'More 1'},{key:'more-02',label:'More 2'},
+    {key:'more-03',label:'More 3'},{key:'more-04',label:'More 4'},{key:'more-05',label:'More 5'},
+  ];
+  let home = getHome();
+  if(!Array.isArray(home.cats)) home.cats = HOME_DEFAULT_CATS.slice();
+  if(!home.images) home.images = {};
+
+  const homeSrc = key => home.images[key] || ('images/'+key+'.jpg');
+  const homeCard = o => `<div class="home-card">
+      <img class="thumb" id="thumb-${o.key}" src="${homeSrc(o.key)}" alt="${o.label}">
+      <div class="k">${o.label}</div>
+      <input type="file" accept="image/jpeg,image/png,image/webp" onchange="onHomeImg('${o.key}',this)">
+    </div>`;
+  function renderHome(){
+    document.getElementById('home-cats').innerHTML = HOME_DEFAULT_CATS.map((d,i)=>
+      `<div><label>Word ${i+1}</label><input id="cat-${i}" value="${(home.cats[i]||d).replace(/"/g,'&quot;')}"></div>`).join('');
+    document.getElementById('home-collage').innerHTML = HOME_COLLAGE.map(homeCard).join('');
+    document.getElementById('home-more').innerHTML = HOME_MORE.map(homeCard).join('');
+  }
+
+  // shrink an uploaded image in-browser so it fits localStorage and loads fast
+  function resizeImage(file,maxDim,quality){
+    return new Promise((resolve,reject)=>{
+      const url=URL.createObjectURL(file), img=new Image();
+      img.onload=()=>{ URL.revokeObjectURL(url);
+        let w=img.naturalWidth||img.width, h=img.naturalHeight||img.height;
+        if(Math.max(w,h)>maxDim){ const s=maxDim/Math.max(w,h); w=Math.round(w*s); h=Math.round(h*s); }
+        const c=document.createElement('canvas'); c.width=w; c.height=h;
+        c.getContext('2d').drawImage(img,0,0,w,h);
+        resolve(c.toDataURL('image/jpeg',quality));
+      };
+      img.onerror=()=>{ URL.revokeObjectURL(url); reject(new Error('decode')); };
+      img.src=url;
+    });
+  }
+  window.onHomeImg=async (key,input)=>{
+    const file=input.files&&input.files[0]; if(!file) return;
+    try{
+      const dataURL=await resizeImage(file,1200,0.82);
+      home.images[key]=dataURL;
+      const t=document.getElementById('thumb-'+key); if(t) t.src=dataURL;
+      toast('Photo updated — click Save Changes to publish');
+    }catch(e){ toast('Couldn’t read that image — please use a JPG, PNG or WebP'); input.value=''; }
+  };
+  window.saveHome=()=>{
+    HOME_DEFAULT_CATS.forEach((_,i)=>{ const el=document.getElementById('cat-'+i);
+      if(el) home.cats[i]=el.value.trim()||HOME_DEFAULT_CATS[i]; });
+    try{ DB.set('home',home); toast('Homepage saved — storefront updated'); }
+    catch(e){ toast('This browser is out of space — replace fewer photos at a time'); }
+  };
+  window.resetHome=()=>{
+    localStorage.removeItem('cherish_home');
+    home={cats:HOME_DEFAULT_CATS.slice(),images:{}};
+    renderHome(); toast('Homepage reset to default');
+  };
+  renderHome();
+</script>
+</body>
+</html>

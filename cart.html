@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your Bag — CHERISH</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="site-head"></div>
+
+<div class="wrap page-hero"><p class="eyebrow">Checkout</p><h1>Your Bag</h1></div>
+
+<section style="padding-top:30px">
+  <div class="wrap">
+    <div id="cart-root"></div>
+  </div>
+</section>
+
+<div id="site-foot"></div>
+<script src="js/app.js"></script>
+<script>
+  renderHeader('shop'); renderFooter();
+  if(!Auth.in()){ location.href='login.html?next=cart.html'; }
+
+  const root=document.getElementById('cart-root');
+  function render(){
+    const items=Cart.all();
+    const customs=DB.get('customs',[]);
+    if(!items.length){
+      root.innerHTML=`<div class="empty"><h2>Your bag is empty</h2>
+        <p class="muted">Discover the Shimmer Collection or design something custom.</p>
+        <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
+          <a href="shop.html" class="btn">Shop</a><a href="custom.html" class="btn ghost">Custom Studio</a></div></div>`;
+      return;
+    }
+    let ci=0;
+    const rows=items.map(it=>{
+      const p=PRODUCTS.find(x=>x.id===it.id);
+      if(p){
+        return `<div class="cart-item">
+          <div class="tile"><img src="${p.img}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover;display:block"></div>
+          <div><h3>${p.name}</h3><div class="meta">Size ${it.size}</div>
+            <div class="qty"><button onclick="chg('${it.key}',-1)">–</button><span>${it.qty}</span><button onclick="chg('${it.key}',1)">+</button></div>
+            <button class="rm" onclick="rm('${it.key}')">Remove</button></div>
+          <div style="font-family:var(--serif);font-size:1.2rem">${fmt(p.price*it.qty)}</div>
+        </div>`;
+      } else {
+        // custom piece
+        const c=customs[ci++]||{};
+        return `<div class="cart-item">
+          <div class="tile dark"><span class="tile-label" style="font-size:.62rem">Custom</span></div>
+          <div><h3>Custom ${c.piece||'Skirt'}</h3>
+            <div class="meta">${c.rise||''} · Size ${it.size}</div>
+            <div class="meta" style="margin-top:4px">${c.fabrics||''}</div>
+            <button class="rm" onclick="rm('${it.key}')">Remove</button></div>
+          <div style="font-family:var(--serif);font-size:1.2rem">${fmt(c.total||220)}</div>
+        </div>`;
+      }
+    }).join('');
+
+    // total incl customs
+    let total=Cart.total();
+    customs.forEach(c=>{ total += (c.total||220); });
+    const ship = total>250?0:18;
+
+    root.innerHTML=`<div class="cart-grid">
+      <div>${rows}</div>
+      <div class="summary">
+        <h3>Summary</h3>
+        <div class="row"><span>Subtotal</span><span>${fmt(total)}</span></div>
+        <div class="row"><span>Shipping</span><span>${ship?fmt(ship):'Complimentary'}</span></div>
+        <div class="row grand"><span>Total</span><span>${fmt(total+ship)}</span></div>
+        <button class="btn gold block" style="margin-top:22px" id="checkout">Place Order</button>
+        <p class="muted center" style="font-size:.76rem;margin-top:12px">Made to order · ships in 2–3 weeks</p>
+      </div></div>`;
+
+    document.getElementById('checkout').onclick=()=>{
+      // itemised invoice lines (ready-to-wear + custom)
+      let ci2=0;
+      const lines=Cart.all().map(it=>{
+        const pp=PRODUCTS.find(x=>x.id===it.id);
+        if(pp) return {name:pp.name, detail:'Size '+it.size, qty:it.qty, price:pp.price*it.qty};
+        const cc=customs[ci2++]||{};
+        return {name:'Custom '+(cc.piece||'Skirt'), detail:(cc.rise||'')+' · Size '+it.size, qty:1, price:(cc.total||220)};
+      });
+      const order={
+        id:'CH'+Math.floor(10000+Math.random()*90000),
+        date:new Date().toLocaleDateString(),
+        items:Cart.count(),
+        subtotal:total, shipping:ship, total:total+ship,
+        tracking:'1Z'+Math.floor(100000000+Math.random()*900000000),
+        status:'In production',
+        lines
+      };
+      const orders=DB.get('orders',[]); orders.unshift(order);
+      DB.set('orders',orders); Cart.clear(); DB.set('customs',[]);
+      toast('Payment received — order placed');
+      setTimeout(()=>location.href='account.html#orders',1000);
+    };
+  }
+  window.chg=(k,d)=>{ const it=Cart.all().find(x=>x.key===k); if(it){ Cart.setQty(k,it.qty+d);} render(); };
+  window.rm=k=>{ Cart.remove(k); render(); };
+  render();
+</script>
+</body>
+</html>

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CHERISH</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="site-head"></div>
+
+<main class="wrap" id="pd-root">
+  <!-- filled by JS -->
+</main>
+
+<section style="padding-top:0">
+  <div class="wrap">
+    <div class="section-head"><p class="eyebrow">You may also like</p><h2>More from the collection</h2></div>
+    <div class="grid cols-3" id="related"></div>
+  </div>
+</section>
+
+<div id="site-foot"></div>
+<script src="js/app.js"></script>
+<script>
+  renderHeader('shop'); renderFooter();
+  const id=new URLSearchParams(location.search).get('id');
+  const p=PRODUCTS.find(x=>x.id===id)||PRODUCTS[0];
+  document.title=p.name+' — CHERISH';
+  let chosenSize=null;
+
+  document.getElementById('pd-root').innerHTML=`
+    <nav style="padding:26px 0;font-family:var(--sans);font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--soft-ink)">
+      <a href="shop.html">Shop</a> &nbsp;/&nbsp; <span>${p.name}</span>
+    </nav>
+    <div class="pd">
+      <div class="pd-gallery">
+        <div class="pd-main" id="pd-main"><img src="${p.img}" alt="${p.name}" id="pd-mainimg"></div>
+        <div class="pd-thumbs" id="pd-thumbs">
+          ${['center 18%','center 42%','center 66%','center 90%'].map((pos,i)=>`<button class="pd-thumb ${i===0?'active':''}" data-pos="${pos}"><img src="${p.img}" alt=""></button>`).join('')}
+        </div>
+      </div>
+      <div class="pd-info">
+        <p class="eyebrow">The Shimmer Collection</p>
+        <h1>${p.name}</h1>
+        <div class="pd-price">${fmt(p.price)}</div>
+        <p class="desc">${p.blurb}</p>
+        <div style="font-family:var(--sans);font-size:.7rem;letter-spacing:.2em;text-transform:uppercase;color:var(--soft-ink)">Size</div>
+        <div class="size-row" id="size-row">
+          ${p.sizes.map(s=>`<button class="size-opt" data-s="${s}">${s}</button>`).join('')}
+        </div>
+        <div class="pd-actions">
+          <button class="btn gold" id="add-cart" style="flex:1">Add to Bag</button>
+          <button class="btn ghost" id="add-fav">${Fav.has(p.id)?'♥ Saved':'♡ Save'}</button>
+        </div>
+        <div class="accordion">
+          <details open><summary>Details</summary><div class="body">Made to order in New York. Hand-set micro-sequin detailing. Fully traceable materials. Allow 2–3 weeks for production.</div></details>
+          <details><summary>Materials & Care</summary><div class="body">Premium shimmer crêpe with silk-blend lining. Hand wash cold or dry clean. Store flat to protect the sparkle.</div></details>
+          <details><summary>Shipping & Returns</summary><div class="body">Complimentary first-order shipping in the US. Ready-to-wear returns within 14 days. <a href="info.html#shipping" class="link-underline" style="font-size:.76rem">Learn more</a></div></details>
+        </div>
+      </div>
+    </div>`;
+
+  // thumbnail switching (pan the same photo)
+  const mainImg=document.getElementById('pd-mainimg');
+  document.querySelectorAll('#pd-thumbs .pd-thumb').forEach(t=>{
+    t.onclick=()=>{ document.querySelectorAll('#pd-thumbs .pd-thumb').forEach(x=>x.classList.remove('active'));
+      t.classList.add('active'); mainImg.style.objectPosition=t.dataset.pos;
+    };
+  });
+  // size
+  document.querySelectorAll('#size-row .size-opt').forEach(b=>{
+    b.onclick=()=>{ document.querySelectorAll('#size-row .size-opt').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active'); chosenSize=b.dataset.s; };
+  });
+  // add to cart
+  document.getElementById('add-cart').onclick=()=>{
+    if(!chosenSize){ toast('Please choose a size'); return; }
+    Cart.add(p.id,chosenSize,1); toast('Added to your bag');
+  };
+  // favorite
+  const favBtn=document.getElementById('add-fav');
+  favBtn.onclick=()=>{ const on=Fav.toggle(p.id); favBtn.innerHTML=on?'♥ Saved':'♡ Save'; toast(on?'Added to favorites':'Removed'); };
+
+  // related
+  document.getElementById('related').innerHTML=PRODUCTS.filter(x=>x.id!==p.id).slice(0,3).map(productCard).join('');
+</script>
+</body>
+</html>

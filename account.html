@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Account — CHERISH</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="site-head"></div>
+
+<div class="wrap page-hero">
+  <p class="eyebrow">My Account</p>
+  <h1 id="hi">Hello</h1>
+</div>
+
+<section style="padding-top:30px">
+  <div class="wrap">
+    <div class="acct-grid">
+      <nav class="acct-nav">
+        <a class="active" data-p="orders">Purchase History</a>
+        <a data-p="likes">Like History</a>
+        <a data-p="notes">Custom Notes &amp; Ideas</a>
+        <a id="logout">Sign Out</a>
+      </nav>
+      <div>
+        <div class="panel active" id="p-orders">
+          <h2 style="font-size:1.9rem;margin-bottom:18px">Purchase History</h2>
+          <div id="orders"></div>
+        </div>
+        <div class="panel" id="p-likes">
+          <h2 style="font-size:1.9rem;margin-bottom:18px">Like History</h2>
+          <div class="grid cols-3" id="likes"></div>
+          <p class="muted" id="likes-empty" style="display:none">You haven't saved any pieces yet.</p>
+        </div>
+        <div class="panel" id="p-notes">
+          <h2 style="font-size:1.9rem;margin-bottom:8px">Custom Notes &amp; Ideas</h2>
+          <p class="muted" style="margin-bottom:20px">Jot down ideas for future custom orders — fabrics, colours, silhouettes.</p>
+          <div class="field"><textarea id="note-input" rows="3" placeholder="e.g. A low-rise Stardust skirt in champagne satin with a gold zip…"></textarea></div>
+          <button class="btn" id="save-note">Save Note</button>
+          <div id="notes" style="margin-top:26px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="site-foot"></div>
+<script src="js/app.js"></script>
+<script>
+  renderHeader('login'); renderFooter();
+  if(!Auth.in()){ location.href='login.html?next=account.html'; }
+  const u=Auth.user()||{};
+  document.getElementById('hi').textContent='Hello, '+(u.name||'there');
+
+  // panels
+  document.querySelectorAll('.acct-nav a[data-p]').forEach(a=>{
+    a.onclick=()=>{ document.querySelectorAll('.acct-nav a').forEach(x=>x.classList.remove('active'));
+      a.classList.add('active');
+      document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+      document.getElementById('p-'+a.dataset.p).classList.add('active'); };
+  });
+  document.getElementById('logout').onclick=()=>{ Auth.logout(); toast('Signed out'); setTimeout(()=>location.href='index.html',500); };
+
+  // orders (from past checkouts)
+  const orders=DB.get('orders',[]);
+  const oEl=document.getElementById('orders');
+  if(!orders.length){ oEl.innerHTML='<p class="muted">No orders yet. <a href="shop.html" class="link-underline" style="font-size:.78rem">Explore the collection</a></p>'; }
+  else { oEl.innerHTML=orders.map(o=>{
+      const inv=(o.lines||[]).map(l=>`<div style="display:flex;justify-content:space-between;font-size:.86rem;padding:3px 0">
+          <span>${l.name} <span class="muted">· ${l.detail}${l.qty>1?' ×'+l.qty:''}</span></span><span>${fmt(l.price)}</span></div>`).join('');
+      return `<div class="note-card">
+        <div style="display:flex;justify-content:space-between"><b style="font-family:var(--serif);font-size:1.2rem">Order ${o.id}</b><span class="muted">${o.date}</span></div>
+        <div class="muted" style="font-size:.82rem;letter-spacing:.06em;text-transform:uppercase;margin:8px 0 4px">${o.status||'Confirmed'}${o.tracking?' · Tracking '+o.tracking:''}</div>
+        ${inv?`<details style="margin-top:10px"><summary style="cursor:pointer;font-family:var(--sans);font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-deep)">View invoice</summary>
+          <div style="margin-top:10px;border-top:1px solid var(--line);padding-top:10px">${inv}
+            <div style="display:flex;justify-content:space-between;font-size:.86rem;padding:3px 0;color:var(--soft-ink)"><span>Shipping</span><span>${o.shipping?fmt(o.shipping):'Complimentary'}</span></div>
+            <div style="display:flex;justify-content:space-between;border-top:1px solid var(--line);margin-top:6px;padding-top:8px;font-family:var(--serif);font-size:1.1rem"><span>Total</span><span>${fmt(o.total)}</span></div>
+          </div></details>`:`<div class="muted" style="font-size:.9rem">${o.items} item(s) · ${fmt(o.total)}</div>`}
+      </div>`;
+    }).join(''); }
+
+  // likes
+  const favs=Fav.all().map(id=>PRODUCTS.find(p=>p.id===id)).filter(Boolean);
+  if(favs.length) document.getElementById('likes').innerHTML=favs.map(productCard).join('');
+  else document.getElementById('likes-empty').style.display='block';
+
+  // notes
+  const notesEl=document.getElementById('notes');
+  function renderNotes(){
+    const notes=DB.get('notes',[]);
+    notesEl.innerHTML=notes.length?notes.map((n,i)=>`
+      <div class="note-card"><div style="display:flex;justify-content:space-between;gap:14px">
+        <span>${n.text}</span>
+        <button class="rm" onclick="delNote(${i})" style="font-family:var(--sans);font-size:.64rem;letter-spacing:.16em;text-transform:uppercase;color:var(--soft-ink)">Remove</button>
+      </div><div class="muted" style="font-size:.74rem;margin-top:8px">${n.date}</div></div>`).join('')
+      :'<p class="muted">No notes yet.</p>';
+  }
+  window.delNote=i=>{ const n=DB.get('notes',[]); n.splice(i,1); DB.set('notes',n); renderNotes(); };
+  document.getElementById('save-note').onclick=()=>{
+    const v=document.getElementById('note-input').value.trim(); if(!v) return;
+    const n=DB.get('notes',[]); n.unshift({text:v,date:new Date().toLocaleDateString()}); DB.set('notes',n);
+    document.getElementById('note-input').value=''; renderNotes(); toast('Note saved');
+  };
+  renderNotes();
+</script>
+</body>
+</html>

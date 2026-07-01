@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shop — The Shimmer Collection</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="site-head"></div>
+
+<main class="shop-main" id="shop-main">
+
+  <!-- category sidebar (opens from the menu button) -->
+  <aside class="shop-cats" id="shop-cats">
+    <button class="cat active" data-cat="all">All</button>
+    <button class="cat" data-cat="tops">Tops</button>
+    <button class="cat" data-cat="bottoms">Bottoms</button>
+  </aside>
+
+  <div class="shop-body">
+    <div class="shop-h1">Shop Ready-to-Wear Pieces</div>
+
+    <div class="shop-banner">
+      <span class="the">The</span>
+      <span class="coll">Shimmer Collection</span>
+      <span class="tag">For the extra sparkle in your day</span>
+    </div>
+
+    <section class="shop-products" id="shop-products"></section>
+    <p class="center muted" id="noresults" style="display:none;padding:0 40px 70px">No pieces in this category yet.</p>
+  </div>
+</main>
+
+<!-- FAQ -->
+<section id="faq" style="background:var(--cream)">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow">Good to know</p>
+      <h2>Frequently Asked Questions</h2>
+    </div>
+    <div class="faq">
+      <details><summary>How does made-to-order work?</summary><div class="body">Once you place an order, your piece is cut and finished by hand in our New York studio. Most ready-to-wear pieces ship within 2–3 weeks.</div></details>
+      <details><summary>What sizes do you offer?</summary><div class="body">The Shimmer Collection runs XS–L. Because each piece is made to order, we're happy to discuss minor adjustments — see the <a href="info.html#size-chart" class="link-underline" style="font-size:.78rem">Size Chart</a>.</div></details>
+      <details><summary>How should I care for the sparkle detailing?</summary><div class="body">Hand wash cold or dry clean. The micro-sequins are individually secured, but gentle care keeps them luminous for years.</div></details>
+      <details><summary>Can I return a piece?</summary><div class="body">Ready-to-wear pieces can be returned within 14 days. Custom and made-to-order pieces are final sale.</div></details>
+    </div>
+  </div>
+</section>
+
+<div id="site-foot"></div>
+<script src="js/app.js"></script>
+<script>
+  renderHeader('shop'); renderFooter();
+  const wrap=document.getElementById('shop-products');
+  const nores=document.getElementById('noresults');
+  const params=new URLSearchParams(location.search);
+  const q=(params.get('q')||'').toLowerCase().trim();
+  let cat='all';
+
+  function shopCard(p){
+    const on=Fav.has(p.id)?'on':'';
+    return `<a class="shop-card" href="product.html?id=${p.id}">
+      <div class="ph">
+        <img src="${p.img}" alt="${p.name}">
+        <button class="fav ${on}" aria-label="Favorite" onclick="event.preventDefault();event.stopPropagation();const r=Fav.toggle('${p.id}');this.classList.toggle('on',r);toast(r?'Added to favorites':'Removed');">${I.heart}</button>
+      </div>
+      <div class="nm">${p.name}</div>
+      <div class="sz">Sizes · ${p.sizes.join(' / ')}</div>
+    </a>`;
+  }
+
+  function render(){
+    let list=PRODUCTS.filter(p=>cat==='all'||p.cat===cat);
+    if(q) list=list.filter(p=>p.name.toLowerCase().includes(q)||p.blurb.toLowerCase().includes(q));
+    wrap.innerHTML=list.map(shopCard).join('');
+    nores.style.display=list.length?'none':'block';
+  }
+
+  // category filters
+  document.querySelectorAll('#shop-cats .cat').forEach(b=>{
+    b.onclick=()=>{ document.querySelectorAll('#shop-cats .cat').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active'); cat=b.dataset.cat; render(); };
+  });
+
+  // the menu (3 lines) opens the category sidebar on Shop
+  window.menuClick=function(){ document.getElementById('shop-main').classList.toggle('cats-open'); };
+
+  render();
+</script>
+</body>
+</html>

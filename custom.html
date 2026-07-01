@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Custom Studio — CHERISH</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="site-head"></div>
+
+<div class="wrap page-hero">
+  <p class="eyebrow">Made entirely for you</p>
+  <h1>The Custom Studio</h1>
+  <p class="muted" style="max-width:620px;margin:18px auto 0">Design your skirt layer by layer. Choose the silhouette, the fit and the fabric for every layer — we scan, cut and finish it to order.</p>
+</div>
+
+<section style="padding-top:40px">
+  <div class="wrap">
+    <div class="builder">
+
+      <!-- PREVIEW (3D viewer under development — emoji placeholder for now) -->
+      <div class="preview-stage">
+        <div class="preview-3d static" id="stage">
+          <div class="preview-emoji" role="img" aria-label="3D preview placeholder">🧊</div>
+          <div class="preview-dev"><b>3D preview — under development</b>Live drag-to-rotate is coming soon</div>
+        </div>
+        <p class="muted center" style="font-size:.82rem;margin-top:16px">Each layer is 3D-scanned and isolated, then cut in your chosen fabric.</p>
+      </div>
+
+      <!-- CONFIGURATOR -->
+      <div>
+        <!-- step 1 -->
+        <div class="step">
+          <div class="step-no">Step 01</div>
+          <h3>Choose a piece</h3>
+          <div class="opt-row" id="piece">
+            <button class="opt active" data-v="Skirt">Skirt</button>
+            <button class="opt" data-soon>Top — soon</button>
+            <button class="opt" data-soon>Set — soon</button>
+          </div>
+        </div>
+        <!-- step 2 -->
+        <div class="step">
+          <div class="step-no">Step 02</div>
+          <h3>Rise</h3>
+          <div class="opt-row" id="rise">
+            <button class="opt active" data-v="High Rise">High Rise</button>
+            <button class="opt" data-v="Low Rise">Low Rise</button>
+          </div>
+        </div>
+        <!-- step 3 -->
+        <div class="step">
+          <div class="step-no">Step 03</div>
+          <h3>Size</h3>
+          <div class="opt-row" id="size">
+            <button class="opt" data-v="XS">XS</button>
+            <button class="opt active" data-v="S">S</button>
+            <button class="opt" data-v="M">M</button>
+            <button class="opt" data-v="L">L</button>
+          </div>
+        </div>
+        <!-- step 4 -->
+        <div class="step">
+          <div class="step-no">Step 04</div>
+          <h3>Fabric, layer by layer</h3>
+          <p class="muted" style="font-size:.88rem;margin-bottom:6px">Hover a swatch for the material; out-of-stock options are marked.</p>
+          <div id="layers"></div>
+        </div>
+        <!-- step 5 -->
+        <div class="step">
+          <div class="step-no">Step 05</div>
+          <h3>Finishing touches</h3>
+          <div class="opt-row" id="finish">
+            <button class="opt active" data-v="Invisible Zip" data-add="0">Invisible Zip</button>
+            <button class="opt" data-v="Exposed Gold Zip" data-add="25">Exposed Gold Zip · +$25</button>
+            <button class="opt" data-v="Hook & Eye" data-add="15">Hook &amp; Eye · +$15</button>
+          </div>
+        </div>
+
+        <!-- summary -->
+        <div class="build-summary">
+          <div class="row"><span>Base custom skirt</span><span>$220</span></div>
+          <div class="row"><span>Fabric & layers</span><span id="s-fabric">$0</span></div>
+          <div class="row"><span>Finishing</span><span id="s-finish">$0</span></div>
+          <div class="row total"><span>Total</span><span id="s-total">$220</span></div>
+          <button class="btn gold block" id="build-add" style="margin-top:20px">Add Custom Piece to Bag</button>
+          <p class="muted center" style="font-size:.78rem;margin-top:12px" id="build-meta"></p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- fabric note -->
+<section style="background:var(--cream)">
+  <div class="wrap">
+    <div class="section-head"><p class="eyebrow">Transparency</p><h2>The fabric stock sheet</h2>
+      <p class="muted">Our fabric library is updated in real time. Each material shows whether it's in stock and whether your chosen silhouette can be made in it — so what you design is always what you'll receive.</p>
+    </div>
+  </div>
+</section>
+
+<div id="site-foot"></div>
+<script src="js/app.js"></script>
+<script>
+  renderHeader('custom'); renderFooter();
+
+  /* fabric library per layer */
+  const FABRICS = {
+    L1: { title:'Layer 1 · Undershorts', svg:'L1', opts:[
+      {n:'Stretch Jersey', c:'#d9cdb6', add:0, stock:true},
+      {n:'Silk Charmeuse', c:'#cdbd9a', add:18, stock:true},
+      {n:'Organic Cotton', c:'#c2b59a', add:10, stock:false},
+    ]},
+    L2: { title:'Layer 2 · Skirt Body', svg:'L2', opts:[
+      {n:'Shimmer Crêpe', c:'#c9b78f', add:0, stock:true},
+      {n:'Champagne Satin', c:'#cbb583', add:30, stock:true},
+      {n:'Recycled Tulle', c:'#bfaf8e', add:22, stock:true},
+      {n:'Velvet (Ink)', c:'#5b5346', add:40, stock:false},
+    ]},
+    L3: { title:'Layer 3 · Sparkle Hem', svg:'L3', opts:[
+      {n:'Gold Sequin', c:'#e7c873', add:0, stock:true},
+      {n:'Pearl Shimmer', c:'#ecdfc4', add:20, stock:true},
+      {n:'Rose Sparkle', c:'#e3b9a6', add:20, stock:false},
+    ]},
+  };
+
+  const state = { piece:'Skirt', rise:'High Rise', size:'S', finish:0,
+                  fabric:{L1:0,L2:0,L3:0} };
+
+  /* build layer pickers */
+  const layersEl=document.getElementById('layers');
+  layersEl.innerHTML=Object.entries(FABRICS).map(([key,L])=>`
+    <div class="layer-pick">
+      <div class="lname"><span>${L.title}</span><b id="lbl-${key}">${L.opts[0].n}</b></div>
+      <div class="swatches" data-layer="${key}">
+        ${L.opts.map((o,i)=>`<div class="swatch ${i===0?'active':''} ${o.stock?'':'oos'}"
+            style="background:${o.c}" title="${o.n}${o.stock?'':' · out of stock'}" data-i="${i}">
+            ${o.stock?'':'<span class="oos-x">✕</span>'}</div>`).join('')}
+      </div>
+    </div>`).join('');
+
+  function paint(){
+    Object.entries(FABRICS).forEach(([key,L])=>{
+      const o=L.opts[state.fabric[key]];
+      document.getElementById(L.svg)?.setAttribute('fill',o.c);   // SVG preview may be absent (placeholder)
+      const lbl=document.getElementById('lbl-'+key); if(lbl) lbl.textContent=o.n;
+    });
+    document.getElementById('WB')?.setAttribute('fill', state.rise==='High Rise'?'#b29a68':'#c2ad7e');
+  }
+  function calc(){
+    let fab=0; Object.entries(FABRICS).forEach(([k,L])=>fab+=L.opts[state.fabric[k]].add);
+    const base=220;
+    document.getElementById('s-fabric').textContent=fmt(fab);
+    document.getElementById('s-finish').textContent=fmt(state.finish);
+    document.getElementById('s-total').textContent=fmt(base+fab+state.finish);
+    document.getElementById('build-meta').textContent=
+      `${state.piece} · ${state.rise} · Size ${state.size}`;
+    return base+fab+state.finish;
+  }
+
+  /* option groups */
+  function group(id,key,isFinish){
+    document.querySelectorAll('#'+id+' .opt').forEach(b=>{
+      b.onclick=()=>{
+        if(b.dataset.soon){ toast('Coming soon'); return; }
+        document.querySelectorAll('#'+id+' .opt').forEach(x=>x.classList.remove('active'));
+        b.classList.add('active');
+        if(isFinish) state.finish=+b.dataset.add; else state[key]=b.dataset.v;
+        paint(); calc();
+      };
+    });
+  }
+  group('piece','piece'); group('rise','rise'); group('size','size'); group('finish',null,true);
+
+  /* swatches */
+  document.querySelectorAll('.swatches').forEach(row=>{
+    const key=row.dataset.layer;
+    row.querySelectorAll('.swatch').forEach(sw=>{
+      sw.onclick=()=>{
+        const opt=FABRICS[key].opts[+sw.dataset.i];
+        if(!opt.stock){ toast(opt.n+' is out of stock'); return; }
+        row.querySelectorAll('.swatch').forEach(x=>x.classList.remove('active'));
+        sw.classList.add('active'); state.fabric[key]=+sw.dataset.i; paint(); calc();
+      };
+    });
+  });
+
+  /* drag to rotate — only wires up when the real 3D SVG is present.
+     While the 3D viewer is under development the stage shows an emoji
+     placeholder (no #skirt), so we skip the rotation handlers. */
+  const stage=document.getElementById('stage'), skirt=document.getElementById('skirt');
+  if(stage && skirt){
+    let rot=0, dragging=false, startX=0, startRot=0, auto;
+    const setRot=r=>{ rot=r; skirt.style.transform=`perspective(800px) rotateY(${r}deg)`; };
+    const down=x=>{ dragging=true; startX=x; startRot=rot; clearInterval(auto); };
+    const move=x=>{ if(dragging) setRot(startRot+(x-startX)*0.6); };
+    stage.addEventListener('mousedown',e=>down(e.clientX));
+    window.addEventListener('mousemove',e=>move(e.clientX));
+    window.addEventListener('mouseup',()=>dragging=false);
+    stage.addEventListener('touchstart',e=>down(e.touches[0].clientX),{passive:true});
+    stage.addEventListener('touchmove',e=>move(e.touches[0].clientX),{passive:true});
+    stage.addEventListener('touchend',()=>dragging=false);
+    auto=setInterval(()=>{ if(!dragging) setRot(15*Math.sin(Date.now()/1600)); },40);
+  }
+
+  /* add to bag */
+  document.getElementById('build-add').onclick=()=>{
+    const total=calc();
+    const fabs=Object.entries(FABRICS).map(([k,L])=>L.opts[state.fabric[k]].n).join(' / ');
+    Cart.add('custom-'+Date.now(), state.size, 1);
+    // store a readable custom line item alongside
+    const customs=DB.get('customs',[]);
+    customs.push({piece:state.piece,rise:state.rise,size:state.size,fabrics:fabs,total});
+    DB.set('customs',customs);
+    toast('Custom skirt added to your bag');
+  };
+
+  paint(); calc();
+</script>
+</body>
+</html>

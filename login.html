@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Login — CHERISH</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="site-head"></div>
+
+<div class="wrap auth-wrap">
+  <div class="center" style="margin-bottom:30px">
+    <p class="eyebrow">Your account</p>
+    <h1 style="font-size:2.6rem;margin-top:10px">Welcome</h1>
+    <p class="muted" style="font-size:.9rem;margin-top:8px">Sign in to track orders, save favorites and note ideas for custom pieces.</p>
+  </div>
+  <div class="auth-tabs">
+    <button type="button" class="auth-tab active" data-tab="login">Sign In</button>
+    <button type="button" class="auth-tab" data-tab="register">Sign Up</button>
+  </div>
+
+  <form id="login-form">
+    <div class="field"><label>Email</label><input type="email" id="li-email" required placeholder="you@email.com"></div>
+    <div class="field"><label>Password</label><input type="password" id="li-pass" required placeholder="••••••••"></div>
+    <button class="btn block" type="submit">Sign In</button>
+    <p class="form-note">No account yet? <a href="#" onclick="switchTab('register');return false;">Sign up</a></p>
+  </form>
+
+  <form id="register-form" style="display:none">
+    <div class="field"><label>Name</label><input type="text" id="rg-name" placeholder="First name"></div>
+    <div class="field"><label>Email</label><input type="email" id="rg-email" required placeholder="you@email.com"></div>
+    <div class="field"><label>Password</label><input type="password" id="rg-pass" required placeholder="Choose a password"></div>
+    <button class="btn block gold" type="submit">Sign Up</button>
+    <p class="form-note">Already with us? <a href="#" onclick="switchTab('login');return false;">Sign in</a></p>
+  </form>
+</div>
+
+<div id="site-foot"></div>
+<script src="js/app.js"></script>
+<script>
+  renderHeader('login'); renderFooter();
+  const next=new URLSearchParams(location.search).get('next')||'account.html';
+
+  window.switchTab=function(t){
+    document.querySelectorAll('.auth-tab').forEach(x=>x.classList.toggle('active',x.dataset.tab===t));
+    document.getElementById('login-form').style.display   = t==='login'?'block':'none';
+    document.getElementById('register-form').style.display= t==='register'?'block':'none';
+  };
+  document.querySelectorAll('.auth-tab').forEach(b=>b.addEventListener('click',()=>switchTab(b.dataset.tab)));
+  // allow ?tab=register to open directly on the register form
+  if((new URLSearchParams(location.search).get('tab'))==='register') switchTab('register');
+
+  document.getElementById('login-form').onsubmit=e=>{
+    e.preventDefault();
+    Auth.login(document.getElementById('li-email').value);
+    toast('Welcome back'); setTimeout(()=>location.href=next,600);
+  };
+  document.getElementById('register-form').onsubmit=e=>{
+    e.preventDefault();
+    Auth.login(document.getElementById('rg-email').value, document.getElementById('rg-name').value);
+    toast('Account created'); setTimeout(()=>location.href=next,600);
+  };
+</script>
+</body>
+</html>
