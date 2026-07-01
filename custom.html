@@ -23,19 +23,63 @@
       <div class="preview-stage">
         <div class="preview-3d" id="stage">
           <svg class="skirt-svg" id="skirt" viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <!-- clip overlays to the body / lining so shading reads on ANY fabric colour -->
+              <clipPath id="bodyClip"><path d="M66 116 L134 116 C150 150 160 210 168 266 C150 262 132 260 100 259 C68 260 50 262 32 266 C40 210 50 150 66 116 Z"/></clipPath>
+              <clipPath id="liningClip"><path d="M90 168 L110 168 C112 208 114 240 116 272 C110 270 105 269 100 268.5 C95 269 90 270 84 272 C86 240 88 208 90 168 Z"/></clipPath>
+              <!-- cylindrical volume: dark edges, bright centre -->
+              <linearGradient id="cyl" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0" stop-color="#000" stop-opacity="0.22"/><stop offset="0.16" stop-color="#000" stop-opacity="0.06"/>
+                <stop offset="0.42" stop-color="#fff" stop-opacity="0.16"/><stop offset="0.58" stop-color="#fff" stop-opacity="0.16"/>
+                <stop offset="0.84" stop-color="#000" stop-opacity="0.06"/><stop offset="1" stop-color="#000" stop-opacity="0.22"/>
+              </linearGradient>
+              <linearGradient id="hemShade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.18"/></linearGradient>
+              <linearGradient id="wbSheen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.35"/><stop offset="0.5" stop-color="#fff" stop-opacity="0.05"/><stop offset="1" stop-color="#000" stop-opacity="0.14"/></linearGradient>
+              <linearGradient id="slitDark" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity="0.28"/><stop offset="1" stop-color="#000" stop-opacity="0.05"/></linearGradient>
+              <linearGradient id="liningShade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity="0.22"/><stop offset="0.55" stop-color="#000" stop-opacity="0.10"/><stop offset="1" stop-color="#000" stop-opacity="0.02"/></linearGradient>
+            </defs>
             <g id="skirtGroup">
-              <!-- Layer 1: undershorts -->
-              <path id="L1" d="M72 120 H128 L134 196 H104 L100 170 L96 196 H66 Z" fill="#d9cdb6"/>
-              <!-- Layer 2: skirt body -->
-              <path id="L2" d="M66 116 H134 L168 252 H32 Z" fill="#c9b78f"/>
-              <!-- waistband / rise -->
-              <rect id="WB" x="66" y="102" width="68" height="16" rx="2" fill="#b29a68"/>
-              <!-- Layer 3: sparkle hem -->
-              <path id="L3" d="M32 252 H168 L174 272 H26 Z" fill="#e7c873"/>
+              <!-- Layer 1: lining, revealed through the front slit (JS swaps its fill) -->
+              <path id="L1" d="M90 168 L110 168 C112 208 114 240 116 272 C110 270 105 269 100 268.5 C95 269 90 270 84 272 C86 240 88 208 90 168 Z" fill="#e3d7bf"/>
+              <g clip-path="url(#liningClip)">
+                <rect x="80" y="168" width="40" height="106" fill="url(#liningShade)"/>
+                <path d="M100 168 L100 272" stroke="#000" stroke-width="4" stroke-opacity="0.06"/>
+                <path d="M94 170 C95 210 96 244 96 272" stroke="#fff" stroke-width="1.2" stroke-opacity="0.16" fill="none"/>
+                <path d="M106 170 C105 210 104 244 104 272" stroke="#fff" stroke-width="1.2" stroke-opacity="0.16" fill="none"/>
+              </g>
+              <!-- Layer 2: skirt body with a centre-front slit (JS swaps its fill) -->
+              <path id="L2" d="M66 116 L134 116 C150 150 160 210 168 266 C150 262 132 260 112 259.4 C110 232 108 200 106 166 L94 166 C92 200 90 232 88 259.4 C68 260 50 262 32 266 C40 210 50 150 66 116 Z" fill="#cbb079"/>
+              <!-- volume + knife-pleats + hem shade + slit edges, clipped to the body -->
+              <g clip-path="url(#bodyClip)">
+                <rect x="24" y="112" width="152" height="164" fill="url(#cyl)"/>
+                <path d="M76 118 C72 170 62 216 55 264" stroke="#000" stroke-width="2.6" stroke-opacity="0.12" fill="none"/>
+                <path d="M84 118 C81 170 74 216 70 265" stroke="#000" stroke-width="2.6" stroke-opacity="0.10" fill="none"/>
+                <path d="M92 118 C90 168 89 200 88 258" stroke="#000" stroke-width="2.6" stroke-opacity="0.08" fill="none"/>
+                <path d="M108 118 C110 168 111 200 112 258" stroke="#000" stroke-width="2.6" stroke-opacity="0.08" fill="none"/>
+                <path d="M116 118 C119 170 126 216 130 265" stroke="#000" stroke-width="2.6" stroke-opacity="0.10" fill="none"/>
+                <path d="M124 118 C128 170 138 216 145 264" stroke="#000" stroke-width="2.6" stroke-opacity="0.12" fill="none"/>
+                <path d="M72 118 C68 170 57 216 48 264" stroke="#fff" stroke-width="1.2" stroke-opacity="0.20" fill="none"/>
+                <path d="M80 118 C76 170 68 216 62 264" stroke="#fff" stroke-width="1.2" stroke-opacity="0.20" fill="none"/>
+                <path d="M88 118 C86 168 85 200 84 258" stroke="#fff" stroke-width="1.2" stroke-opacity="0.18" fill="none"/>
+                <path d="M112 118 C114 168 115 200 116 258" stroke="#fff" stroke-width="1.2" stroke-opacity="0.18" fill="none"/>
+                <path d="M120 118 C124 170 132 216 138 264" stroke="#fff" stroke-width="1.2" stroke-opacity="0.20" fill="none"/>
+                <path d="M128 118 C133 170 143 216 152 264" stroke="#fff" stroke-width="1.2" stroke-opacity="0.20" fill="none"/>
+                <rect x="24" y="238" width="152" height="40" fill="url(#hemShade)"/>
+                <path d="M94 166 C92 200 90 232 88 259 L92 259 C93 232 95 200 96 166 Z" fill="url(#slitDark)"/>
+                <path d="M106 166 C108 200 110 232 112 259 L108 259 C107 232 105 200 104 166 Z" fill="url(#slitDark)"/>
+              </g>
+              <!-- Layer 3: sparkle hem band following the curve (JS swaps its fill) -->
+              <path id="L3" d="M32 266 C50 262 68 260 100 259 C132 260 150 262 168 266 C167 271 166 274 165 277 C147 273 130 271 100 270 C70 271 53 273 35 277 C34 274 33 271 32 266 Z" fill="#e8c56a"/>
+              <path d="M32 266 C50 262 68 260 100 259 C132 260 150 262 168 266" stroke="#fff" stroke-width="0.8" stroke-opacity="0.30" fill="none"/>
+              <path d="M35 277 C53 273 70 271 100 270 C130 271 147 273 165 277" stroke="#000" stroke-width="0.8" stroke-opacity="0.14" fill="none"/>
+              <!-- waistband (JS moves/recolours #WB for rise); sheen overlay tracks it -->
+              <rect id="WB" x="64" y="96" width="72" height="22" rx="5" fill="#b29a68"/>
+              <rect id="WBsheen" x="64" y="96" width="72" height="22" rx="5" fill="url(#wbSheen)"/>
               <g id="sparkles" fill="#fff8e1">
-                <circle cx="52" cy="262" r="2.4"/><circle cx="84" cy="265" r="1.7"/>
-                <circle cx="116" cy="263" r="2.1"/><circle cx="146" cy="266" r="1.9"/>
-                <circle cx="100" cy="260" r="1.6"/>
+                <circle cx="45" cy="269" r="1.1"/><circle cx="58" cy="266.5" r="0.9"/><circle cx="72" cy="264.5" r="1.2"/>
+                <circle cx="86" cy="263.5" r="0.9"/><circle cx="100" cy="263" r="1.3"/><circle cx="114" cy="263.5" r="0.9"/>
+                <circle cx="128" cy="264.5" r="1.2"/><circle cx="142" cy="266.5" r="0.9"/><circle cx="155" cy="269" r="1.1"/>
+                <circle cx="51" cy="272.5" r="0.7"/><circle cx="93" cy="266.5" r="0.7"/><circle cx="107" cy="266.5" r="0.7"/><circle cx="149" cy="272.5" r="0.7"/>
               </g>
             </g>
           </svg>
@@ -126,18 +170,18 @@
   /* fabric library per layer */
   const FABRICS = {
     L1: { title:'Layer 1 · Undershorts', svg:'L1', opts:[
-      {n:'Stretch Jersey', c:'#d9cdb6', add:0, stock:true},
+      {n:'Stretch Jersey', c:'#e3d7bf', add:0, stock:true},
       {n:'Silk Charmeuse', c:'#cdbd9a', add:18, stock:true},
       {n:'Organic Cotton', c:'#c2b59a', add:10, stock:false},
     ]},
     L2: { title:'Layer 2 · Skirt Body', svg:'L2', opts:[
-      {n:'Shimmer Crêpe', c:'#c9b78f', add:0, stock:true},
+      {n:'Shimmer Crêpe', c:'#cbb079', add:0, stock:true},
       {n:'Champagne Satin', c:'#cbb583', add:30, stock:true},
       {n:'Recycled Tulle', c:'#bfaf8e', add:22, stock:true},
       {n:'Velvet (Ink)', c:'#5b5346', add:40, stock:false},
     ]},
     L3: { title:'Layer 3 · Sparkle Hem', svg:'L3', opts:[
-      {n:'Gold Sequin', c:'#e7c873', add:0, stock:true},
+      {n:'Gold Sequin', c:'#e8c56a', add:0, stock:true},
       {n:'Pearl Shimmer', c:'#ecdfc4', add:20, stock:true},
       {n:'Rose Sparkle', c:'#e3b9a6', add:20, stock:false},
     ]},
@@ -165,13 +209,15 @@
       document.getElementById(L.svg)?.setAttribute('fill',o.c);
       const lbl=document.getElementById('lbl-'+key); if(lbl) lbl.textContent=o.n;
     });
-    // rise → waistband height & position
+    // rise → waistband height & position (sheen overlay tracks the band)
     const wb=document.getElementById('WB');
     if(wb){
       const high = state.rise==='High Rise';
-      wb.setAttribute('y', high?96:110);
-      wb.setAttribute('height', high?22:12);
+      const y = high?96:110, h = high?22:12;
+      wb.setAttribute('y', y); wb.setAttribute('height', h);
       wb.setAttribute('fill', high?'#b29a68':'#c2ad7e');
+      const sheen=document.getElementById('WBsheen');
+      if(sheen){ sheen.setAttribute('y', y); sheen.setAttribute('height', h); }
     }
     // size → overall width, scaled about the centre (x=100)
     const g=document.getElementById('skirtGroup');
@@ -218,22 +264,30 @@
     });
   });
 
-  /* drag to rotate — only wires up when the real 3D SVG is present.
-     While the 3D viewer is under development the stage shows an emoji
-     placeholder (no #skirt), so we skip the rotation handlers. */
+  /* live 3D preview motion: damped auto-sway + eased drag, with a subtle
+     waist-pivot perspective so it reads like fabric hanging and turning. */
   const stage=document.getElementById('stage'), skirt=document.getElementById('skirt');
   if(stage && skirt){
-    let rot=0, dragging=false, startX=0, startRot=0, auto;
-    const setRot=r=>{ rot=r; skirt.style.transform=`perspective(800px) rotateY(${r}deg)`; };
-    const down=x=>{ dragging=true; startX=x; startRot=rot; clearInterval(auto); };
-    const move=x=>{ if(dragging) setRot(startRot+(x-startX)*0.6); };
-    stage.addEventListener('mousedown',e=>down(e.clientX));
+    skirt.style.transition='none';
+    skirt.style.transformOrigin='50% 28%';
+    let rot=0, targetRot=0, dragging=false, startX=0, startRot=0, idle=0, last=performance.now();
+    const apply=()=>{ skirt.style.transform=`perspective(1100px) rotateX(3deg) rotateY(${rot.toFixed(2)}deg)`; };
+    const down=x=>{ dragging=true; startX=x; startRot=rot; idle=0; };
+    const move=x=>{ if(dragging){ targetRot=startRot+(x-startX)*0.55; idle=0; } };
+    const up=()=>{ dragging=false; idle=0; };
+    stage.addEventListener('mousedown',e=>{ e.preventDefault(); down(e.clientX); });
     window.addEventListener('mousemove',e=>move(e.clientX));
-    window.addEventListener('mouseup',()=>dragging=false);
+    window.addEventListener('mouseup',up);
     stage.addEventListener('touchstart',e=>down(e.touches[0].clientX),{passive:true});
     stage.addEventListener('touchmove',e=>move(e.touches[0].clientX),{passive:true});
-    stage.addEventListener('touchend',()=>dragging=false);
-    auto=setInterval(()=>{ if(!dragging) setRot(15*Math.sin(Date.now()/1600)); },40);
+    stage.addEventListener('touchend',up);
+    (function frame(now){
+      const dt=Math.min(64, now-last); last=now;
+      if(!dragging){ idle+=dt; if(idle>1300) targetRot=20*Math.sin(now/2200); }
+      rot += (targetRot-rot)*(1-Math.pow(0.0015, dt/1000));
+      apply();
+      requestAnimationFrame(frame);
+    })(last);
   }
 
   /* add to bag */
