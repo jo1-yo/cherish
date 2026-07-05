@@ -9,7 +9,8 @@
 <body>
 <div id="site-head"></div>
 
-<main class="shop-main" id="shop-main">
+<!-- COMING SOON: remove the "soon" class + the .shop-soon block below to relaunch the shop -->
+<main class="shop-main soon" id="shop-main">
 
   <!-- category sidebar (opens from the menu button) -->
   <aside class="shop-cats" id="shop-cats">
@@ -29,6 +30,19 @@
 
     <section class="shop-products" id="shop-products"></section>
     <p class="center muted" id="noresults" style="display:none;padding:0 40px 70px">No pieces in this category yet.</p>
+  </div>
+
+  <!-- coming-soon notice over the blurred collection -->
+  <div class="shop-soon">
+    <div class="card">
+      <span class="stamp">In Production</span>
+      <h2>Almost here</h2>
+      <p>We're confirming the final run with our workshop — every piece is checked by hand before it goes on sale. Leave your email and we'll let you know the moment the collection is live.</p>
+      <input type="email" id="soon-email" placeholder="Email address" autocomplete="email"
+        onkeydown="if(event.key==='Enter')soonNotify()">
+      <button class="btn gold block" onclick="soonNotify()">Notify Me</button>
+      <p class="muted" style="font-size:.74rem;margin:12px 0 0">One email when we launch — that's it.</p>
+    </div>
   </div>
 </main>
 
@@ -85,6 +99,9 @@
 
   // the menu (3 lines) opens the category sidebar on Shop
   window.menuClick=function(){ document.getElementById('shop-main').classList.toggle('cats-open'); };
+
+  // coming-soon: joins the interest list — same list the admin sees
+  window.soonNotify=async()=>{ await joinList(document.getElementById('soon-email'),'shop-notify'); };
 
   render();
 </script>

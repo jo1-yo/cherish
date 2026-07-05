@@ -638,3 +638,17 @@ section{padding:96px 0}
 .list-modal input{width:100%;border:1px solid var(--line);background:var(--white);padding:13px 14px;
   font-family:var(--sans);font-size:.9rem;text-align:center;margin-bottom:12px}
 .list-modal input:focus{outline:none;border-color:var(--gold-deep)}
+
+/* shop — coming-soon veil (remove the "soon" class on <main> to relaunch) */
+.shop-main.soon{position:relative}
+.shop-main.soon .shop-body,.shop-main.soon .shop-cats{filter:blur(9px) saturate(.92);pointer-events:none;user-select:none}
+.shop-soon{position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;padding:20px}
+.shop-soon .card{background:var(--ivory);border:1px solid var(--ink);max-width:430px;width:100%;
+  padding:46px 40px 40px;text-align:center;box-shadow:var(--shadow)}
+.shop-soon .stamp{display:inline-block;font-family:var(--sans);font-size:.62rem;letter-spacing:.3em;
+  text-transform:uppercase;color:var(--gold-deep);border:1px solid var(--gold-deep);padding:7px 14px 6px}
+.shop-soon h2{font-size:2.3rem;margin:16px 0 10px}
+.shop-soon p{font-size:.9rem;color:var(--soft-ink);margin-bottom:24px}
+.shop-soon input{width:100%;border:1px solid var(--line);background:var(--white);padding:13px 14px;
+  font-family:var(--sans);font-size:.9rem;text-align:center;margin-bottom:12px}
+.shop-soon input:focus{outline:none;border-color:var(--gold-deep)}

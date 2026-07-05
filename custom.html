@@ -24,62 +24,48 @@
         <div class="preview-3d" id="stage">
           <svg class="skirt-svg" id="skirt" viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">
             <defs>
-              <!-- clip overlays to the body / lining so shading reads on ANY fabric colour -->
-              <clipPath id="bodyClip"><path d="M66 116 L134 116 C150 150 160 210 168 266 C150 262 132 260 100 259 C68 260 50 262 32 266 C40 210 50 150 66 116 Z"/></clipPath>
-              <clipPath id="liningClip"><path d="M90 168 L110 168 C112 208 114 240 116 272 C110 270 105 269 100 268.5 C95 269 90 270 84 272 C86 240 88 208 90 168 Z"/></clipPath>
-              <!-- cylindrical volume: dark edges, bright centre -->
+              <!-- clip overlays to the body / shorts so shading reads on ANY fabric colour -->
+              <clipPath id="bodyClip"><path d="M66 116 L134 116 C140 158 154 210 168 256 C145 264 122 266.5 100 266.5 C78 266.5 55 264 32 256 C46 210 60 158 66 116 Z"/></clipPath>
+              <clipPath id="shortsClip"><path d="M68 248 L132 248 C133.5 262 133 271 130 278.5 C122 282.8 112 284.4 104 284.6 C102.4 282.4 100 280.8 100 280.8 C100 280.8 97.6 282.4 96 284.6 C88 284.4 78 282.8 70 278.5 C67 271 66.5 262 68 248 Z"/></clipPath>
+              <!-- soft cylindrical volume: gently dark edges, bright centre -->
               <linearGradient id="cyl" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0" stop-color="#000" stop-opacity="0.22"/><stop offset="0.16" stop-color="#000" stop-opacity="0.06"/>
-                <stop offset="0.42" stop-color="#fff" stop-opacity="0.16"/><stop offset="0.58" stop-color="#fff" stop-opacity="0.16"/>
-                <stop offset="0.84" stop-color="#000" stop-opacity="0.06"/><stop offset="1" stop-color="#000" stop-opacity="0.22"/>
+                <stop offset="0" stop-color="#000" stop-opacity="0.13"/><stop offset="0.18" stop-color="#000" stop-opacity="0.03"/>
+                <stop offset="0.45" stop-color="#fff" stop-opacity="0.12"/><stop offset="0.55" stop-color="#fff" stop-opacity="0.12"/>
+                <stop offset="0.82" stop-color="#000" stop-opacity="0.03"/><stop offset="1" stop-color="#000" stop-opacity="0.13"/>
               </linearGradient>
-              <linearGradient id="hemShade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.18"/></linearGradient>
+              <linearGradient id="hemShade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity="0.10"/></linearGradient>
               <linearGradient id="wbSheen" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.35"/><stop offset="0.5" stop-color="#fff" stop-opacity="0.05"/><stop offset="1" stop-color="#000" stop-opacity="0.14"/></linearGradient>
-              <linearGradient id="slitDark" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity="0.28"/><stop offset="1" stop-color="#000" stop-opacity="0.05"/></linearGradient>
-              <linearGradient id="liningShade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity="0.22"/><stop offset="0.55" stop-color="#000" stop-opacity="0.10"/><stop offset="1" stop-color="#000" stop-opacity="0.02"/></linearGradient>
+              <linearGradient id="shortShade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000" stop-opacity="0.22"/><stop offset="0.55" stop-color="#000" stop-opacity="0.06"/><stop offset="1" stop-color="#000" stop-opacity="0"/></linearGradient>
             </defs>
             <g id="skirtGroup">
-              <!-- Layer 1: lining, revealed through the front slit (JS swaps its fill) -->
-              <path id="L1" d="M90 168 L110 168 C112 208 114 240 116 272 C110 270 105 269 100 268.5 C95 269 90 270 84 272 C86 240 88 208 90 168 Z" fill="#e3d7bf"/>
-              <g clip-path="url(#liningClip)">
-                <rect x="80" y="168" width="40" height="106" fill="url(#liningShade)"/>
-                <path d="M100 168 L100 272" stroke="#000" stroke-width="4" stroke-opacity="0.06"/>
-                <path d="M94 170 C95 210 96 244 96 272" stroke="#fff" stroke-width="1.2" stroke-opacity="0.16" fill="none"/>
-                <path d="M106 170 C105 210 104 244 104 272" stroke="#fff" stroke-width="1.2" stroke-opacity="0.16" fill="none"/>
+              <!-- Layer 1: undershorts, peeking below the hem (JS swaps its fill) -->
+              <path id="L1" d="M68 248 L132 248 C133.5 262 133 271 130 278.5 C122 282.8 112 284.4 104 284.6 C102.4 282.4 100 280.8 100 280.8 C100 280.8 97.6 282.4 96 284.6 C88 284.4 78 282.8 70 278.5 C67 271 66.5 262 68 248 Z" fill="#e3d7bf"/>
+              <g clip-path="url(#shortsClip)">
+                <rect x="60" y="244" width="80" height="46" fill="url(#shortShade)"/>
               </g>
-              <!-- Layer 2: skirt body with a centre-front slit (JS swaps its fill) -->
-              <path id="L2" d="M66 116 L134 116 C150 150 160 210 168 266 C150 262 132 260 112 259.4 C110 232 108 200 106 166 L94 166 C92 200 90 232 88 259.4 C68 260 50 262 32 266 C40 210 50 150 66 116 Z" fill="#cbb079"/>
-              <!-- volume + knife-pleats + hem shade + slit edges, clipped to the body -->
+              <!-- Layer 2: clean A-line skirt body, dress-emoji style (JS swaps its fill) -->
+              <path id="L2" d="M66 116 L134 116 C140 158 154 210 168 256 C145 264 122 266.5 100 266.5 C78 266.5 55 264 32 256 C46 210 60 158 66 116 Z" fill="#cbb079"/>
+              <!-- soft volume + two gentle folds + hem shade, clipped to the body -->
               <g clip-path="url(#bodyClip)">
                 <rect x="24" y="112" width="152" height="164" fill="url(#cyl)"/>
-                <path d="M76 118 C72 170 62 216 55 264" stroke="#000" stroke-width="2.6" stroke-opacity="0.12" fill="none"/>
-                <path d="M84 118 C81 170 74 216 70 265" stroke="#000" stroke-width="2.6" stroke-opacity="0.10" fill="none"/>
-                <path d="M92 118 C90 168 89 200 88 258" stroke="#000" stroke-width="2.6" stroke-opacity="0.08" fill="none"/>
-                <path d="M108 118 C110 168 111 200 112 258" stroke="#000" stroke-width="2.6" stroke-opacity="0.08" fill="none"/>
-                <path d="M116 118 C119 170 126 216 130 265" stroke="#000" stroke-width="2.6" stroke-opacity="0.10" fill="none"/>
-                <path d="M124 118 C128 170 138 216 145 264" stroke="#000" stroke-width="2.6" stroke-opacity="0.12" fill="none"/>
-                <path d="M72 118 C68 170 57 216 48 264" stroke="#fff" stroke-width="1.2" stroke-opacity="0.20" fill="none"/>
-                <path d="M80 118 C76 170 68 216 62 264" stroke="#fff" stroke-width="1.2" stroke-opacity="0.20" fill="none"/>
-                <path d="M88 118 C86 168 85 200 84 258" stroke="#fff" stroke-width="1.2" stroke-opacity="0.18" fill="none"/>
-                <path d="M112 118 C114 168 115 200 116 258" stroke="#fff" stroke-width="1.2" stroke-opacity="0.18" fill="none"/>
-                <path d="M120 118 C124 170 132 216 138 264" stroke="#fff" stroke-width="1.2" stroke-opacity="0.20" fill="none"/>
-                <path d="M128 118 C133 170 143 216 152 264" stroke="#fff" stroke-width="1.2" stroke-opacity="0.20" fill="none"/>
-                <rect x="24" y="238" width="152" height="40" fill="url(#hemShade)"/>
-                <path d="M94 166 C92 200 90 232 88 259 L92 259 C93 232 95 200 96 166 Z" fill="url(#slitDark)"/>
-                <path d="M106 166 C108 200 110 232 112 259 L108 259 C107 232 105 200 104 166 Z" fill="url(#slitDark)"/>
+                <path d="M84 118 C80 164 71 210 61 250" stroke="#000" stroke-width="2.2" stroke-opacity="0.07" fill="none"/>
+                <path d="M116 118 C120 164 129 210 139 250" stroke="#000" stroke-width="2.2" stroke-opacity="0.07" fill="none"/>
+                <path d="M79 118 C75 164 66 210 56 248" stroke="#fff" stroke-width="1.1" stroke-opacity="0.16" fill="none"/>
+                <path d="M121 118 C125 164 134 210 144 248" stroke="#fff" stroke-width="1.1" stroke-opacity="0.16" fill="none"/>
+                <rect x="24" y="230" width="152" height="46" fill="url(#hemShade)"/>
               </g>
-              <!-- Layer 3: sparkle hem band following the curve (JS swaps its fill) -->
-              <path id="L3" d="M32 266 C50 262 68 260 100 259 C132 260 150 262 168 266 C167 271 166 274 165 277 C147 273 130 271 100 270 C70 271 53 273 35 277 C34 274 33 271 32 266 Z" fill="#e8c56a"/>
-              <path d="M32 266 C50 262 68 260 100 259 C132 260 150 262 168 266" stroke="#fff" stroke-width="0.8" stroke-opacity="0.30" fill="none"/>
-              <path d="M35 277 C53 273 70 271 100 270 C130 271 147 273 165 277" stroke="#000" stroke-width="0.8" stroke-opacity="0.14" fill="none"/>
+              <!-- Layer 3: sparkle hem band along the hem curve (JS swaps its fill) -->
+              <path id="L3" d="M32 256 C55 264 78 266.5 100 266.5 C122 266.5 145 264 168 256 C166.7 252.6 165.4 249.3 164 246 C144 253 122 255.5 100 255.5 C78 255.5 56 253 36 246 C34.6 249.3 33.3 252.6 32 256 Z" fill="#e8c56a"/>
+              <path d="M36 246 C56 253 78 255.5 100 255.5 C122 255.5 144 253 164 246" stroke="#fff" stroke-width="0.8" stroke-opacity="0.30" fill="none"/>
+              <path d="M32 256 C55 264 78 266.5 100 266.5 C122 266.5 145 264 168 256" stroke="#000" stroke-width="0.8" stroke-opacity="0.12" fill="none"/>
               <!-- waistband (JS moves/recolours #WB for rise); sheen overlay tracks it -->
               <rect id="WB" x="64" y="96" width="72" height="22" rx="5" fill="#b29a68"/>
               <rect id="WBsheen" x="64" y="96" width="72" height="22" rx="5" fill="url(#wbSheen)"/>
               <g id="sparkles" fill="#fff8e1">
-                <circle cx="45" cy="269" r="1.1"/><circle cx="58" cy="266.5" r="0.9"/><circle cx="72" cy="264.5" r="1.2"/>
-                <circle cx="86" cy="263.5" r="0.9"/><circle cx="100" cy="263" r="1.3"/><circle cx="114" cy="263.5" r="0.9"/>
-                <circle cx="128" cy="264.5" r="1.2"/><circle cx="142" cy="266.5" r="0.9"/><circle cx="155" cy="269" r="1.1"/>
-                <circle cx="51" cy="272.5" r="0.7"/><circle cx="93" cy="266.5" r="0.7"/><circle cx="107" cy="266.5" r="0.7"/><circle cx="149" cy="272.5" r="0.7"/>
+                <circle cx="46" cy="254.5" r="1.1"/><circle cx="60" cy="257.5" r="0.9"/><circle cx="74" cy="259.5" r="1.2"/>
+                <circle cx="87" cy="260.6" r="0.9"/><circle cx="100" cy="261" r="1.3"/><circle cx="113" cy="260.6" r="0.9"/>
+                <circle cx="126" cy="259.5" r="1.2"/><circle cx="140" cy="257.5" r="0.9"/><circle cx="154" cy="254.5" r="1.1"/>
+                <circle cx="53" cy="258.6" r="0.7"/><circle cx="93" cy="263.4" r="0.7"/><circle cx="107" cy="263.4" r="0.7"/><circle cx="147" cy="258.6" r="0.7"/>
               </g>
             </g>
           </svg>
