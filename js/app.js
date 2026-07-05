@@ -44,12 +44,16 @@ const Api = {
   async placeOrder(order){
     return Api._post('/api/orders', order);
   },
+  async joinInterest(email,source){
+    return Api._post('/api/interest', {email,source});
+  },
   adminKey(){ return sessionStorage.getItem('cherish_admin_key') || ''; },
   async verifyAdminKey(key){
     return Api._post('/api/admin/verify-key', {}, key);
   },
   async listUsers(){ return Api._get('/api/admin/users'); },
   async listOrders(){ return Api._get('/api/admin/orders'); },
+  async listInterest(){ return Api._get('/api/admin/interest'); },
   async saveContent(payload){
     return Api._post('/api/admin/content', payload);
   },
@@ -197,7 +201,7 @@ function renderFooter(){
           <p style="font-size:.86rem;margin-bottom:14px">Early access to limited drops.</p>
           <div class="foot-news">
             <input type="email" placeholder="Email address"
-              onkeydown="if(event.key==='Enter'){toast('Welcome to the list');this.value=''}">
+              onkeydown="if(event.key==='Enter'){joinList(this,'footer')}">
           </div>
         </div>
       </div>
@@ -230,6 +234,23 @@ function cartGate(e){
   }
   return true;
 }
+/* interest list signup — shared by the homepage invite and the footer input.
+   Emails are recorded by the backend and shown in admin's Interest List tab. */
+async function joinList(input,source){
+  const email=(input.value||'').trim();
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ toast('Please enter a valid email address'); return false; }
+  try{
+    const r=await Api.joinInterest(email,source);
+    localStorage.setItem('cherish_interest_joined','1');
+    toast(r.already?'You’re already on the list':'Welcome to the list');
+    input.value='';
+    return true;
+  }catch(err){
+    toast(err.message.includes('fetch')?'Couldn’t reach the studio — please try again in a moment':err.message);
+    return false;
+  }
+}
+
 let toastTimer;
 function toast(msg){
   let t=document.getElementById('toast');

@@ -15,7 +15,7 @@
   .adm-tab{font-family:var(--sans);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;
     padding:11px 20px;border:1px solid var(--line);background:var(--white);transition:.25s}
   .adm-tab.active{background:var(--ink);color:var(--ivory);border-color:var(--ink)}
-  .cards{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px;margin-bottom:36px}
+  .cards{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:16px;margin-bottom:36px}
   .kpi{background:var(--white);border:1px solid var(--line);padding:22px}
   .kpi .n{font-family:var(--serif);font-size:2.4rem;line-height:1}
   .kpi .l{font-family:var(--sans);font-size:.66rem;letter-spacing:.18em;text-transform:uppercase;color:var(--soft-ink);margin-top:8px}
@@ -74,6 +74,7 @@
       <button class="adm-tab" data-p="products">Products</button>
       <button class="adm-tab" data-p="homepage">Homepage</button>
       <button class="adm-tab" data-p="users">Registered Users</button>
+      <button class="adm-tab" data-p="interest">Interest List</button>
       <button class="adm-tab" data-p="activity">Customer Activity</button>
     </div>
 
@@ -129,6 +130,15 @@
       <div id="users-panel"><p class="muted">Loading…</p></div>
     </div>
 
+    <!-- INTEREST LIST (real backend — see backend/server.py) -->
+    <div class="panel" id="p-interest">
+      <div class="bar"><h2>Interest List</h2>
+        <div class="row-btns"><button class="mini" onclick="loadInterest()">Refresh</button></div>
+      </div>
+      <p class="note">Emails collected by the homepage invite and the footer signup — live from the backend.</p>
+      <div id="interest-panel"><p class="muted">Loading…</p></div>
+    </div>
+
     <!-- ACTIVITY -->
     <div class="panel" id="p-activity">
       <div class="bar"><h2>Customer Activity</h2></div>
@@ -158,7 +168,7 @@
         : err.message);
     }
   }
-  function show(){ document.getElementById('gate').style.display='none'; document.getElementById('app').style.display='block'; render(); if(window.loadUsers) loadUsers(); if(window.loadOrders) loadOrders(); }
+  function show(){ document.getElementById('gate').style.display='none'; document.getElementById('app').style.display='block'; render(); if(window.loadUsers) loadUsers(); if(window.loadOrders) loadOrders(); if(window.loadInterest) loadInterest(); }
   // NOTE: auto-unlock runs at the END of this script — show() -> render()
   // depends on `cat`/render being initialized below (TDZ crash otherwise).
 
@@ -183,7 +193,8 @@
       <div class="kpi"><div class="n" id="kpi-revenue">—</div><div class="l">Revenue</div></div>
       <div class="kpi"><div class="n">${cat.length}</div><div class="l">Products</div></div>
       <div class="kpi"><div class="n">${favs.length}</div><div class="l">Favorited</div></div>
-      <div class="kpi"><div class="n" id="kpi-users">—</div><div class="l">Registered Users</div></div>`;
+      <div class="kpi"><div class="n" id="kpi-users">—</div><div class="l">Registered Users</div></div>
+      <div class="kpi"><div class="n" id="kpi-interest">—</div><div class="l">Interest List</div></div>`;
 
     // products table
     document.getElementById('prows').innerHTML = cat.map((p,i)=>`<tr>
@@ -339,13 +350,28 @@
       el.innerHTML = /admin key/i.test(err.message) ? needKey : backendDown;
     }
   };
+  window.loadInterest=async()=>{
+    const el=document.getElementById('interest-panel');
+    try{
+      const {interest,count}=await Api.listInterest();
+      setKpi('kpi-interest',count);
+      el.innerHTML = interest.length
+        ? `<table><thead><tr><th>Email</th><th>Joined</th><th style="width:130px">Source</th></tr></thead><tbody>${
+            interest.map(e=>`<tr><td>${esc(e.email)}</td><td>${esc(e.joinedAt)}</td><td>${esc(e.source)||'site'}</td></tr>`).join('')}</tbody></table>`
+        : '<p class="muted">No signups yet — the invite appears when a visitor scrolls to “More Pictures” on the homepage.</p>';
+    }catch(err){
+      el.innerHTML = /admin key/i.test(err.message) ? needKey : backendDown;
+    }
+  };
   document.querySelector('.adm-tab[data-p="users"]').addEventListener('click', loadUsers);
   document.querySelector('.adm-tab[data-p="orders"]').addEventListener('click', loadOrders);
+  document.querySelector('.adm-tab[data-p="interest"]').addEventListener('click', loadInterest);
   // keep whichever backend table is being viewed live (only once inside the dashboard)
   setInterval(()=>{
     if(document.getElementById('app').style.display!=='block') return;
     if(document.getElementById('p-users').classList.contains('active')) loadUsers();
     if(document.getElementById('p-orders').classList.contains('active')) loadOrders();
+    if(document.getElementById('p-interest').classList.contains('active')) loadInterest();
   }, 5000);
 
   // auto-unlock for a session that already entered the passcode

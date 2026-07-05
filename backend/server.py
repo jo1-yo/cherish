@@ -5,6 +5,7 @@ What goes through here:
   - Sign Up: email -> verification code (emailed via Resend) -> user saved
   - Sign In: only registered emails; every login recorded
   - Orders: checkout posts the order here so it shows on every admin device
+  - Interest list: homepage invite + footer signup emails, viewable in admin
   - Site content: admin's homepage words / photos / product edits are saved
     globally (POST /api/admin/content) so every visitor sees them
   - Admin reads (users + orders tables) require the admin key
@@ -137,6 +138,14 @@ def save_orders(orders):
     _save_records("orders.json", orders, "Update orders")
 
 
+def load_interest():
+    return _load_records("interest.json")
+
+
+def save_interest(entries):
+    _save_records("interest.json", entries, "Update interest list")
+
+
 def load_content():
     if GITHUB_TOKEN:
         raw, _ = gh_get_file(SITE_REPO, CONTENT_REL)
@@ -260,6 +269,11 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send_json(401, {"ok": False, "error": "Wrong admin key"})
             orders = load_orders()
             return self._send_json(200, {"ok": True, "count": len(orders), "orders": orders})
+        if self.path == "/api/admin/interest":
+            if not self._is_admin():
+                return self._send_json(401, {"ok": False, "error": "Wrong admin key"})
+            entries = load_interest()
+            return self._send_json(200, {"ok": True, "count": len(entries), "interest": entries})
         self._send_json(404, {"ok": False, "error": "not found"})
 
     def do_POST(self):
@@ -268,6 +282,7 @@ class Handler(BaseHTTPRequestHandler):
             "/api/auth/verify-code": self._handle_verify_code,
             "/api/auth/login": self._handle_login,
             "/api/orders": self._handle_place_order,
+            "/api/interest": self._handle_join_interest,
             "/api/admin/verify-key": self._handle_verify_key,
             "/api/admin/content": self._handle_save_content,
         }
@@ -403,6 +418,22 @@ class Handler(BaseHTTPRequestHandler):
         save_orders(orders)
         print(f"[order] {order_id} — {email} — ${order['total']}")
         return self._send_json(200, {"ok": True, "order": order})
+
+    # ---- interest list ----
+    def _handle_join_interest(self):
+        body = self._read_json_body()
+        email = (body.get("email") or "").strip().lower()
+        if not is_valid_email(email):
+            return self._send_json(400, {"ok": False, "error": "Please enter a valid email address"})
+        source = str(body.get("source") or "site")[:40]
+
+        entries = load_interest()
+        if any(e.get("email") == email for e in entries):
+            return self._send_json(200, {"ok": True, "already": True})
+        entries.insert(0, {"email": email, "joinedAt": now_str(), "source": source})
+        save_interest(entries)
+        print(f"[interest] {email} joined via {source}")
+        return self._send_json(200, {"ok": True, "already": False})
 
     # ---- admin ----
     def _handle_verify_key(self):

@@ -68,11 +68,46 @@
 
 </main>
 
+<!-- THE LIST — invite shown once, when the visitor reaches More Pictures -->
+<div class="list-modal" id="list-modal" role="dialog" aria-modal="true" aria-labelledby="list-modal-title">
+  <div class="card">
+    <button class="close" aria-label="Close" onclick="closeListModal()">&times;</button>
+    <p class="eyebrow">The List</p>
+    <h3 id="list-modal-title">For the extra sparkle</h3>
+    <p>Early access to limited drops and new made-to-order pieces — a note from the studio, only when it matters.</p>
+    <input type="email" id="list-email" placeholder="Email address" autocomplete="email"
+      onkeydown="if(event.key==='Enter')joinListModal()">
+    <button class="btn gold block" onclick="joinListModal()">Join the List</button>
+  </div>
+</div>
+
 <script src="js/app.js"></script>
 <script>
   renderHeader('home');
   applyHomeContent();   // apply any admin overrides (category words + photos)
-  // FAQ anchor: send shop.html#faq to the FAQ block
+
+  // ---- The List invite: once per visitor, when More Pictures scrolls into view ----
+  const listModal=document.getElementById('list-modal');
+  function openListModal(){
+    localStorage.setItem('cherish_interest_prompted','1');   // once ever, even if dismissed
+    const me=Auth.user(); if(me&&me.email) document.getElementById('list-email').value=me.email;
+    listModal.classList.add('open');
+    setTimeout(()=>document.getElementById('list-email').focus(),450);
+  }
+  window.closeListModal=()=>listModal.classList.remove('open');
+  window.joinListModal=async()=>{
+    if(await joinList(document.getElementById('list-email'),'homepage')) closeListModal();
+  };
+  listModal.addEventListener('click',e=>{ if(e.target===listModal) closeListModal(); });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeListModal(); });
+
+  if(!localStorage.getItem('cherish_interest_prompted') && !localStorage.getItem('cherish_interest_joined')
+     && 'IntersectionObserver' in window){
+    const io=new IntersectionObserver(entries=>{
+      if(entries.some(e=>e.isIntersecting)){ io.disconnect(); openListModal(); }
+    },{threshold:.35});
+    io.observe(document.querySelector('.fp-strip'));
+  }
 </script>
 </body>
 </html>
