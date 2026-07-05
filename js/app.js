@@ -36,6 +36,9 @@ const Api = {
   async verifyCode(email,code,name){
     return Api._post('/api/auth/verify-code', {email,code,name});
   },
+  async login(email){
+    return Api._post('/api/auth/login', {email});
+  },
   async listUsers(){
     const res = await fetch(API_BASE+'/api/admin/users');
     if(!res.ok) throw new Error('backend responded '+res.status);

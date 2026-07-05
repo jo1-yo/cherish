@@ -61,10 +61,24 @@
   // allow ?tab=register to open directly on the register form
   if((new URLSearchParams(location.search).get('tab'))==='register') switchTab('register');
 
-  document.getElementById('login-form').onsubmit=e=>{
+  document.getElementById('login-form').onsubmit=async e=>{
     e.preventDefault();
-    Auth.login(document.getElementById('li-email').value);
-    toast('Welcome back'); setTimeout(()=>location.href=next,600);
+    const email=document.getElementById('li-email').value.trim();
+    const btn=e.target.querySelector('button[type=submit]');
+    btn.disabled=true; btn.textContent='Signing in…';
+    try{
+      const {user}=await Api.login(email);   // backend records every login
+      Auth.login(user.email,user.name);
+      toast('Welcome back'); setTimeout(()=>location.href=next,600);
+    }catch(err){
+      if(err.message.includes('fetch')){
+        toast('Backend not running — start it with: python3 backend/server.py');
+      }else if(/sign up/i.test(err.message)){
+        toast(err.message);
+        document.getElementById('rg-email').value=email;
+        setTimeout(()=>switchTab('register'),700);
+      }else{ toast(err.message); }
+    }finally{ btn.disabled=false; btn.textContent='Sign In'; }
   };
 
   window.backToRegister=()=>{

@@ -286,8 +286,8 @@
     try{
       const {users}=await Api.listUsers();
       el.innerHTML = users.length
-        ? `<table><thead><tr><th>Name</th><th>Email</th><th>Registered</th></tr></thead><tbody>${
-            users.map(u=>`<tr><td>${u.name}</td><td>${u.email}</td><td>${u.registeredAt}</td></tr>`).join('')}</tbody></table>`
+        ? `<table><thead><tr><th>Name</th><th>Email</th><th>Registered</th><th>Last Login</th><th>Logins</th></tr></thead><tbody>${
+            users.map(u=>`<tr><td>${u.name}</td><td>${u.email}</td><td>${u.registeredAt}</td><td>${u.lastLoginAt||'—'}</td><td>${u.loginCount||0}</td></tr>`).join('')}</tbody></table>`
         : '<p class="muted">No one has signed up yet — try it at <a href="login.html?tab=register" class="link-underline">login.html</a>.</p>';
     }catch(err){
       el.innerHTML = `<p class="note" style="border-left-color:#b01e17">Couldn't reach the backend — start it with <code>python3 backend/server.py</code>, then click Refresh.</p>`;
