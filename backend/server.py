@@ -4,8 +4,8 @@
 Every account action on the frontend goes through here:
   - Sign Up: email -> verification code -> user saved to users.json
   - Sign In: only registered emails may sign in; each login is recorded
-The backend also serves its own live table of everything it has recorded,
-at http://localhost:8082/ — no passcode, local dev only.
+The users table is viewed in the site's admin dashboard (admin.html ->
+"Registered Users" tab), which reads /api/admin/users from this server.
 
 No email provider is configured, so verification codes are printed to this
 terminal instead of actually emailed — that's the one thing you'd swap in
@@ -57,44 +57,6 @@ def send_code_email(email, code):
     print(f"\n{'='*50}\n  VERIFICATION CODE for {email}: {code}\n  (valid for {CODE_TTL_SECONDS // 60} minutes)\n{'='*50}\n")
 
 
-ADMIN_TABLE_PAGE = """<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>Cherish Backend — Registered Users</title>
-<style>
-  body{font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;background:#FAF7F1;color:#2B2620;margin:0;padding:40px}
-  h1{font-weight:600;font-size:1.4rem;letter-spacing:.04em}
-  .sub{color:#6B6357;font-size:.85rem;margin-bottom:24px}
-  table{border-collapse:collapse;width:100%;background:#fff;font-size:.9rem}
-  th,td{border:1px solid #DED4C2;padding:10px 14px;text-align:left}
-  th{background:#F2ECE1;font-size:.7rem;letter-spacing:.12em;text-transform:uppercase}
-  .muted{color:#6B6357}
-  .pill{display:inline-block;background:#F2ECE1;border:1px solid #DED4C2;border-radius:99px;padding:2px 10px;font-size:.75rem}
-</style>
-</head>
-<body>
-<h1>Cherish Backend — Registered Users</h1>
-<p class="sub">Live from users.json · auto-refreshes every 5s · <span class="pill" id="count">…</span></p>
-<table>
-  <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Registered At</th><th>Last Login</th><th>Logins</th></tr></thead>
-  <tbody id="rows"><tr><td colspan="6" class="muted">Loading…</td></tr></tbody>
-</table>
-<script>
-async function refresh(){
-  const r = await fetch('/api/admin/users');
-  const d = await r.json();
-  document.getElementById('count').textContent = d.count + ' user' + (d.count===1?'':'s');
-  document.getElementById('rows').innerHTML = d.users.length
-    ? d.users.map((u,i)=>`<tr><td>${i+1}</td><td>${u.name}</td><td>${u.email}</td><td>${u.registeredAt}</td><td>${u.lastLoginAt||'—'}</td><td>${u.loginCount||0}</td></tr>`).join('')
-    : '<tr><td colspan="6" class="muted">No one has registered yet.</td></tr>';
-}
-refresh(); setInterval(refresh, 5000);
-</script>
-</body>
-</html>"""
-
-
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         print(f"[backend] {self.address_string()} - {fmt % args}")
@@ -107,14 +69,6 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
-        self.end_headers()
-        self.wfile.write(body)
-
-    def _send_html(self, html):
-        body = html.encode("utf-8")
-        self.send_response(200)
-        self.send_header("Content-Type", "text/html; charset=utf-8")
-        self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
 
@@ -133,7 +87,11 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path in ("/", "/admin"):
-            return self._send_html(ADMIN_TABLE_PAGE)
+            # the users table lives in the site's admin dashboard, not here
+            self.send_response(302)
+            self.send_header("Location", "http://localhost:8080/admin.html")
+            self.end_headers()
+            return
         if self.path == "/api/health":
             return self._send_json(200, {"ok": True, "service": "cherish-backend"})
         if self.path == "/api/admin/users":
@@ -216,6 +174,6 @@ class Handler(BaseHTTPRequestHandler):
 if __name__ == "__main__":
     server = ThreadingHTTPServer(("", PORT), Handler)
     print(f"Cherish backend on http://localhost:{PORT}")
-    print(f"Live users table:   http://localhost:{PORT}/")
+    print(f"Users table: http://localhost:8080/admin.html -> Registered Users tab")
     print(f"Registered users stored in {USERS_FILE}\n")
     server.serve_forever()

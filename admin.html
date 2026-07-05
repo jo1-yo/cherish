@@ -15,7 +15,7 @@
   .adm-tab{font-family:var(--sans);font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;
     padding:11px 20px;border:1px solid var(--line);background:var(--white);transition:.25s}
   .adm-tab.active{background:var(--ink);color:var(--ivory);border-color:var(--ink)}
-  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:36px}
+  .cards{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px;margin-bottom:36px}
   .kpi{background:var(--white);border:1px solid var(--line);padding:22px}
   .kpi .n{font-family:var(--serif);font-size:2.4rem;line-height:1}
   .kpi .l{font-family:var(--sans);font-size:.66rem;letter-spacing:.18em;text-transform:uppercase;color:var(--soft-ink);margin-top:8px}
@@ -148,7 +148,8 @@
     } else { toast('Incorrect passcode'); }
   }
   function show(){ document.getElementById('gate').style.display='none'; document.getElementById('app').style.display='block'; render(); }
-  if(sessionStorage.getItem('cherish_admin')==='1') show();
+  // NOTE: auto-unlock runs at the END of this script — show() -> render()
+  // depends on `cat`/render being initialized below (TDZ crash otherwise).
 
   // ---- tabs ----
   document.querySelectorAll('.adm-tab').forEach(b=>b.onclick=()=>{
@@ -168,7 +169,10 @@
       <div class="kpi"><div class="n">${orders.length}</div><div class="l">Orders</div></div>
       <div class="kpi"><div class="n">${fmt(revenue)}</div><div class="l">Revenue</div></div>
       <div class="kpi"><div class="n">${cat.length}</div><div class="l">Products</div></div>
-      <div class="kpi"><div class="n">${favs.length}</div><div class="l">Favorited</div></div>`;
+      <div class="kpi"><div class="n">${favs.length}</div><div class="l">Favorited</div></div>
+      <div class="kpi"><div class="n" id="kpi-users">—</div><div class="l">Registered Users</div></div>`;
+    // registered-users count comes from the backend, so it fills in async
+    Api.listUsers().then(d=>{ const el=document.getElementById('kpi-users'); if(el) el.textContent=d.count; }).catch(()=>{});
 
     // orders
     const oEl=document.getElementById('orders');
@@ -294,6 +298,12 @@
     }
   };
   document.querySelector('.adm-tab[data-p="users"]').addEventListener('click', loadUsers);
+  loadUsers();   // load once on open so the tab is ready
+  // keep the table live while the Users tab is being viewed
+  setInterval(()=>{ if(document.getElementById('p-users').classList.contains('active')) loadUsers(); }, 5000);
+
+  // auto-unlock for a session that already entered the passcode
+  if(sessionStorage.getItem('cherish_admin')==='1') show();
 </script>
 </body>
 </html>
