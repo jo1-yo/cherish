@@ -54,9 +54,9 @@
 <div id="gate" class="gate">
   <div class="adm-top" style="border:none;justify-content:center"><span class="logo">Cherish</span></div>
   <p class="eyebrow">Admin Access</p>
-  <input id="pass" type="password" placeholder="Passcode" onkeydown="if(event.key==='Enter')enter()">
+  <input id="pass" type="password" placeholder="Admin key" onkeydown="if(event.key==='Enter')enter()">
   <button class="btn block" onclick="enter()">Enter Dashboard</button>
-  <p class="note" style="margin-top:20px;border:none;background:none;text-align:center">Demo passcode: <b>cherish</b></p>
+  <p class="note" style="margin-top:20px;border:none;background:none;text-align:center">The key is verified by the backend (local default: <b>cherish</b>)</p>
 </div>
 
 <div id="app" style="display:none">
@@ -77,10 +77,13 @@
       <button class="adm-tab" data-p="activity">Customer Activity</button>
     </div>
 
-    <!-- ORDERS -->
+    <!-- ORDERS (real backend — see backend/server.py) -->
     <div class="panel active" id="p-orders">
-      <div class="bar"><h2>Orders</h2></div>
-      <div id="orders"></div>
+      <div class="bar"><h2>Orders</h2>
+        <div class="row-btns"><button class="mini" onclick="loadOrders()">Refresh</button></div>
+      </div>
+      <p class="note">Orders placed by any customer, on any device — live from the backend.</p>
+      <div id="orders"><p class="muted">Loading…</p></div>
     </div>
 
     <!-- PRODUCTS -->
@@ -92,7 +95,7 @@
           <button class="mini danger" onclick="resetProducts()">Reset to Default</button>
         </div>
       </div>
-      <p class="note">Edits here update the live storefront (catalogue is saved in this browser). Image is a path like <code>images/look-04.jpg</code> or a full URL.</p>
+      <p class="note">Edits here publish to the live storefront for <b>all visitors</b> when you click Save Changes. Image is a path like <code>images/look-04.jpg</code> or a full URL.</p>
       <table><thead><tr><th style="width:90px">ID</th><th>Name</th><th style="width:110px">Category</th><th style="width:90px">Price</th><th>Image</th><th style="width:120px">Sizes</th><th style="width:80px"></th></tr></thead>
         <tbody id="prows"></tbody></table>
     </div>
@@ -105,7 +108,7 @@
           <button class="mini danger" onclick="resetHome()">Reset to Default</button>
         </div>
       </div>
-      <p class="note">Edit the four category words and swap any homepage photo. Changes save in this browser and update the live homepage. New photos are resized automatically; use JPG or PNG (portrait works best).</p>
+      <p class="note">Edit the four category words and swap any homepage photo, then click <b>Save Changes</b> to publish for <b>all visitors</b> (the live site updates in about a minute). New photos are resized automatically; use JPG or PNG (portrait works best).</p>
 
       <div class="home-group-title">Category words</div>
       <div class="home-cats" id="home-cats"></div>
@@ -122,7 +125,7 @@
       <div class="bar"><h2>Registered Users</h2>
         <div class="row-btns"><button class="mini" onclick="loadUsers()">Refresh</button></div>
       </div>
-      <p class="note">Sourced from the local backend (email-verified signups via login.html), not from this browser's storage. Requires <code>python3 backend/server.py</code> running on port 8082.</p>
+      <p class="note">Email-verified signups and their login activity, live from the backend.</p>
       <div id="users-panel"><p class="muted">Loading…</p></div>
     </div>
 
@@ -141,13 +144,21 @@
 
 <script src="js/app.js"></script>
 <script>
-  // ---- gate ----
-  function enter(){
-    if(document.getElementById('pass').value.trim().toLowerCase()==='cherish'){
+  // ---- gate (key is checked by the backend, and reused for admin API calls) ----
+  async function enter(){
+    const key=document.getElementById('pass').value.trim();
+    if(!key) return;
+    try{
+      await Api.verifyAdminKey(key);
+      sessionStorage.setItem('cherish_admin_key', key);
       sessionStorage.setItem('cherish_admin','1'); show();
-    } else { toast('Incorrect passcode'); }
+    }catch(err){
+      toast(err.message.includes('fetch')
+        ? 'Backend unreachable — is it running?'
+        : err.message);
+    }
   }
-  function show(){ document.getElementById('gate').style.display='none'; document.getElementById('app').style.display='block'; render(); }
+  function show(){ document.getElementById('gate').style.display='none'; document.getElementById('app').style.display='block'; render(); if(window.loadUsers) loadUsers(); if(window.loadOrders) loadOrders(); }
   // NOTE: auto-unlock runs at the END of this script — show() -> render()
   // depends on `cat`/render being initialized below (TDZ crash otherwise).
 
@@ -161,27 +172,18 @@
   // ---- editable catalogue (starts from current PRODUCTS) ----
   let cat = JSON.parse(JSON.stringify(PRODUCTS));
 
+  // backend strings (names, emails, order lines) are rendered via innerHTML — escape them
+  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
   function render(){
-    const orders=DB.get('orders',[]), favs=DB.get('fav',[]), notes=DB.get('notes',[]), customs=DB.get('customs',[]);
-    // KPIs
-    const revenue=orders.reduce((s,o)=>s+(o.total||0),0);
+    const favs=DB.get('fav',[]), notes=DB.get('notes',[]), customs=DB.get('customs',[]);
+    // KPIs — orders / revenue / users come from the backend, so they fill in async
     document.getElementById('kpis').innerHTML=`
-      <div class="kpi"><div class="n">${orders.length}</div><div class="l">Orders</div></div>
-      <div class="kpi"><div class="n">${fmt(revenue)}</div><div class="l">Revenue</div></div>
+      <div class="kpi"><div class="n" id="kpi-orders">—</div><div class="l">Orders</div></div>
+      <div class="kpi"><div class="n" id="kpi-revenue">—</div><div class="l">Revenue</div></div>
       <div class="kpi"><div class="n">${cat.length}</div><div class="l">Products</div></div>
       <div class="kpi"><div class="n">${favs.length}</div><div class="l">Favorited</div></div>
       <div class="kpi"><div class="n" id="kpi-users">—</div><div class="l">Registered Users</div></div>`;
-    // registered-users count comes from the backend, so it fills in async
-    Api.listUsers().then(d=>{ const el=document.getElementById('kpi-users'); if(el) el.textContent=d.count; }).catch(()=>{});
-
-    // orders
-    const oEl=document.getElementById('orders');
-    oEl.innerHTML = orders.length ? `<table><thead><tr><th>Order</th><th>Date</th><th>Items</th><th>Total</th><th>Status</th><th>Tracking</th><th>Invoice</th></tr></thead><tbody>${
-      orders.map(o=>`<tr>
-        <td><b>${o.id}</b></td><td>${o.date}</td><td>${o.items||(o.lines?o.lines.length:'-')}</td>
-        <td>${fmt(o.total||0)}</td><td>${o.status||'Confirmed'}</td><td>${o.tracking||'—'}</td>
-        <td class="inv">${(o.lines||[]).map(l=>`${l.name} ×${l.qty} — ${fmt(l.price)}`).join('<br>')||'—'}</td>
-      </tr>`).join('')}</tbody></table>` : '<p class="muted">No orders yet.</p>';
 
     // products table
     document.getElementById('prows').innerHTML = cat.map((p,i)=>`<tr>
@@ -215,8 +217,16 @@
   window.updSizes=(i,v)=>{ cat[i].sizes=v.split(',').map(s=>s.trim()).filter(Boolean); };
   window.addRow=()=>{ cat.push({id:'new-'+Date.now(),name:'New Piece',cat:'bottoms',price:200,img:'images/look-04.jpg',sizes:['XS','S','M','L'],blurb:'A new made-to-order piece.'}); render(); };
   window.delRow=(i)=>{ cat.splice(i,1); render(); };
-  window.saveProducts=()=>{ DB.set('catalog',cat); toast('Catalogue saved — storefront updated'); };
-  window.resetProducts=()=>{ localStorage.removeItem('cherish_catalog'); toast('Reset — reloading'); setTimeout(()=>location.reload(),700); };
+  window.saveProducts=async()=>{
+    DB.set('catalog',cat);                       // instant local feedback
+    try{ const r=await Api.saveContent({products:cat}); toast('Catalogue saved for all visitors — '+r.message); }
+    catch(err){ toast('Saved locally only — backend: '+err.message); }
+  };
+  window.resetProducts=async()=>{
+    localStorage.removeItem('cherish_catalog');
+    try{ await Api.saveContent({products:null}); }catch(err){}
+    toast('Reset — reloading'); setTimeout(()=>location.reload(),700);
+  };
 
   // ---- homepage editor (category words + photo slots) ----
   const HOME_COLLAGE=[
@@ -270,37 +280,73 @@
       toast('Photo updated — click Save Changes to publish');
     }catch(e){ toast('Couldn’t read that image — please use a JPG, PNG or WebP'); input.value=''; }
   };
-  window.saveHome=()=>{
+  window.saveHome=async()=>{
     HOME_DEFAULT_CATS.forEach((_,i)=>{ const el=document.getElementById('cat-'+i);
       if(el) home.cats[i]=el.value.trim()||HOME_DEFAULT_CATS[i]; });
-    try{ DB.set('home',home); toast('Homepage saved — storefront updated'); }
-    catch(e){ toast('This browser is out of space — replace fewer photos at a time'); }
+    try{ DB.set('home',home); }catch(e){}          // instant local feedback
+    // publish globally: send words + only the newly-chosen photos (dataURLs);
+    // already-published photos are paths the backend has stored
+    const newImages={};
+    Object.entries(home.images||{}).forEach(([k,v])=>{ if(String(v).startsWith('data:image')) newImages[k]=v; });
+    try{
+      const r=await Api.saveContent({cats:home.cats, images:newImages});
+      toast('Homepage saved for all visitors — '+r.message);
+    }catch(err){ toast('Saved locally only — backend: '+err.message); }
   };
-  window.resetHome=()=>{
+  window.resetHome=async()=>{
     localStorage.removeItem('cherish_home');
     home={cats:HOME_DEFAULT_CATS.slice(),images:{}};
+    try{ await Api.saveContent({cats:null, images:null}); }catch(err){}
     renderHome(); toast('Homepage reset to default');
   };
   renderHome();
 
-  // ---- registered users (real backend) ----
+  // ---- registered users + orders (real backend) ----
+  const backendDown=`<p class="note" style="border-left-color:#b01e17">Couldn't reach the backend — check that it's running, then click Refresh.</p>`;
+  const needKey=`<p class="note">Enter the dashboard first — this list needs your admin key.</p>`;
+  const setKpi=(id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
+
   window.loadUsers=async()=>{
     const el=document.getElementById('users-panel');
-    el.innerHTML='<p class="muted">Loading…</p>';
     try{
-      const {users}=await Api.listUsers();
+      const {users,count}=await Api.listUsers();
+      setKpi('kpi-users',count);
       el.innerHTML = users.length
         ? `<table><thead><tr><th>Name</th><th>Email</th><th>Registered</th><th>Last Login</th><th>Logins</th></tr></thead><tbody>${
-            users.map(u=>`<tr><td>${u.name}</td><td>${u.email}</td><td>${u.registeredAt}</td><td>${u.lastLoginAt||'—'}</td><td>${u.loginCount||0}</td></tr>`).join('')}</tbody></table>`
+            users.map(u=>`<tr><td>${esc(u.name)}</td><td>${esc(u.email)}</td><td>${esc(u.registeredAt)}</td><td>${esc(u.lastLoginAt)||'—'}</td><td>${u.loginCount||0}</td></tr>`).join('')}</tbody></table>`
         : '<p class="muted">No one has signed up yet — try it at <a href="login.html?tab=register" class="link-underline">login.html</a>.</p>';
     }catch(err){
-      el.innerHTML = `<p class="note" style="border-left-color:#b01e17">Couldn't reach the backend — start it with <code>python3 backend/server.py</code>, then click Refresh.</p>`;
+      el.innerHTML = /admin key/i.test(err.message) ? needKey : backendDown;
+    }
+  };
+  window.loadOrders=async()=>{
+    const el=document.getElementById('orders');
+    try{
+      const {orders,count}=await Api.listOrders();
+      setKpi('kpi-orders',count);
+      setKpi('kpi-revenue',fmt(orders.reduce((s,o)=>s+(o.total||0),0)));
+      el.innerHTML = orders.length
+        ? `<table><thead><tr><th>Order</th><th>Date</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Tracking</th><th>Invoice</th></tr></thead><tbody>${
+            orders.map(o=>`<tr>
+              <td><b>${esc(o.id)}</b></td><td>${esc(o.date)}</td>
+              <td>${esc(o.name)}<br><span class="inv">${esc(o.email)}</span></td>
+              <td>${o.items||(o.lines?o.lines.length:'-')}</td>
+              <td>${fmt(o.total||0)}</td><td>${esc(o.status)||'Confirmed'}</td><td>${esc(o.tracking)||'—'}</td>
+              <td class="inv">${(o.lines||[]).map(l=>`${esc(l.name)} ×${l.qty} — ${fmt(l.price)}`).join('<br>')||'—'}</td>
+            </tr>`).join('')}</tbody></table>`
+        : '<p class="muted">No orders yet.</p>';
+    }catch(err){
+      el.innerHTML = /admin key/i.test(err.message) ? needKey : backendDown;
     }
   };
   document.querySelector('.adm-tab[data-p="users"]').addEventListener('click', loadUsers);
-  loadUsers();   // load once on open so the tab is ready
-  // keep the table live while the Users tab is being viewed
-  setInterval(()=>{ if(document.getElementById('p-users').classList.contains('active')) loadUsers(); }, 5000);
+  document.querySelector('.adm-tab[data-p="orders"]').addEventListener('click', loadOrders);
+  // keep whichever backend table is being viewed live (only once inside the dashboard)
+  setInterval(()=>{
+    if(document.getElementById('app').style.display!=='block') return;
+    if(document.getElementById('p-users').classList.contains('active')) loadUsers();
+    if(document.getElementById('p-orders').classList.contains('active')) loadOrders();
+  }, 5000);
 
   // auto-unlock for a session that already entered the passcode
   if(sessionStorage.getItem('cherish_admin')==='1') show();

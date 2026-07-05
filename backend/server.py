@@ -1,27 +1,50 @@
 #!/usr/bin/env python3
-"""Cherish — local backend (stdlib only, no dependencies).
+"""Cherish — backend (stdlib only, no dependencies). Runs locally and on Render.
 
-Every account action on the frontend goes through here:
-  - Sign Up: email -> verification code -> user saved to users.json
-  - Sign In: only registered emails may sign in; each login is recorded
-The users table is viewed in the site's admin dashboard (admin.html ->
-"Registered Users" tab), which reads /api/admin/users from this server.
+What goes through here:
+  - Sign Up: email -> verification code (emailed via Resend) -> user saved
+  - Sign In: only registered emails; every login recorded
+  - Orders: checkout posts the order here so it shows on every admin device
+  - Site content: admin's homepage words / photos / product edits are saved
+    globally (POST /api/admin/content) so every visitor sees them
+  - Admin reads (users + orders tables) require the admin key
 
-No email provider is configured, so verification codes are printed to this
-terminal instead of actually emailed — that's the one thing you'd swap in
-for production (e.g. call an email API from send_code_email below).
+Configuration is all environment variables (sane local defaults):
+  PORT              port to listen on (Render injects this; local default 8082)
+  ADMIN_KEY         admin passcode for the dashboard + admin API (default "cherish")
+  RESEND_API_KEY    if set, verification codes are emailed via resend.com;
+                    if unset, codes are printed to this log (local dev)
+  EMAIL_FROM        sender, e.g. "Cherish <hello@cherishthestudio.com>"
+                    (default Resend sandbox sender)
+  GITHUB_TOKEN      if set, storage moves to GitHub (Render's free disk is
+                    ephemeral): users -> DATA_REPO, content+images -> SITE_REPO
+                    (committing to SITE_REPO redeploys GitHub Pages, so edits
+                    reach the live site in ~1 minute)
+  SITE_REPO         default "jo1-yo/cherish"        (public site repo)
+  DATA_REPO         default "jo1-yo/cherish-data"   (private, users.json)
 
-Run:  python3 backend/server.py [port]   (defaults to 8082)
+Run locally:  python3 backend/server.py [port]
 """
-import json, os, random, re, string, sys, time
+import base64, json, os, random, re, string, sys, time, urllib.error, urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8082
-DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
-USERS_FILE = os.path.join(DATA_DIR, "users.json")
-CODE_TTL_SECONDS = 10 * 60
+# line-buffer stdout so verification codes show up in Render/log files immediately
+try:
+    sys.stdout.reconfigure(line_buffering=True)
+except AttributeError:
+    pass
 
-os.makedirs(DATA_DIR, exist_ok=True)
+BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
+SITE_DIR = os.path.dirname(BACKEND_DIR)
+
+PORT = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get("PORT", 8082))
+ADMIN_KEY = os.environ.get("ADMIN_KEY", "cherish")
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+EMAIL_FROM = os.environ.get("EMAIL_FROM", "Cherish <onboarding@resend.dev>")
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
+SITE_REPO = os.environ.get("SITE_REPO", "jo1-yo/cherish")
+DATA_REPO = os.environ.get("DATA_REPO", "jo1-yo/cherish-data")
+CODE_TTL_SECONDS = 10 * 60
 
 # in-memory: pending verification codes, keyed by lowercased email
 _pending_codes = {}
@@ -31,32 +54,157 @@ def now_str():
     return time.strftime("%Y-%m-%d %H:%M:%S")
 
 
-def load_users():
-    if not os.path.exists(USERS_FILE):
+# ---------------------------------------------------------------- GitHub API
+def _gh_request(method, url, payload=None):
+    req = urllib.request.Request(url, method=method)
+    req.add_header("Authorization", f"Bearer {GITHUB_TOKEN}")
+    req.add_header("Accept", "application/vnd.github+json")
+    req.add_header("User-Agent", "cherish-backend")
+    data = json.dumps(payload).encode() if payload is not None else None
+    if data:
+        req.add_header("Content-Type", "application/json")
+    with urllib.request.urlopen(req, data, timeout=20) as resp:
+        return json.loads(resp.read() or "{}")
+
+
+def gh_get_file(repo, path):
+    """Return (bytes, sha) or (None, None) if the file doesn't exist."""
+    try:
+        d = _gh_request("GET", f"https://api.github.com/repos/{repo}/contents/{path}")
+        return base64.b64decode(d["content"]), d["sha"]
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return None, None
+        raise
+
+
+def gh_put_file(repo, path, raw_bytes, message):
+    """Create or update a file in the repo (contents API)."""
+    _, sha = gh_get_file(repo, path)
+    payload = {"message": message, "content": base64.b64encode(raw_bytes).decode()}
+    if sha:
+        payload["sha"] = sha
+    _gh_request("PUT", f"https://api.github.com/repos/{repo}/contents/{path}", payload)
+
+
+# ---------------------------------------------------------------- storage
+# Local mode (no GITHUB_TOKEN): plain files in the site folder.
+# GitHub mode: users.json in the private DATA_REPO; site-content.json and
+# uploaded images committed to the public SITE_REPO (GitHub Pages serves them).
+CONTENT_REL = "site-content.json"
+UPLOADS_REL = "images/uploads"
+
+os.makedirs(os.path.join(BACKEND_DIR, "data"), exist_ok=True)
+
+
+def _load_records(filename):
+    """users.json / orders.json — a JSON list, in DATA_REPO or a local file."""
+    if GITHUB_TOKEN:
+        raw, _ = gh_get_file(DATA_REPO, filename)
+        return json.loads(raw) if raw else []
+    p = os.path.join(BACKEND_DIR, "data", filename)
+    if not os.path.exists(p):
         return []
     try:
-        with open(USERS_FILE, "r") as f:
+        with open(p) as f:
             return json.load(f)
     except (json.JSONDecodeError, OSError):
         return []
 
 
+def _save_records(filename, records, message):
+    raw = json.dumps(records, indent=2).encode()
+    if GITHUB_TOKEN:
+        gh_put_file(DATA_REPO, filename, raw, message)
+    else:
+        with open(os.path.join(BACKEND_DIR, "data", filename), "wb") as f:
+            f.write(raw)
+
+
+def load_users():
+    return _load_records("users.json")
+
+
 def save_users(users):
-    with open(USERS_FILE, "w") as f:
-        json.dump(users, f, indent=2)
+    _save_records("users.json", users, "Update users")
 
 
+def load_orders():
+    return _load_records("orders.json")
+
+
+def save_orders(orders):
+    _save_records("orders.json", orders, "Update orders")
+
+
+def load_content():
+    if GITHUB_TOKEN:
+        raw, _ = gh_get_file(SITE_REPO, CONTENT_REL)
+        return json.loads(raw) if raw else {}
+    p = os.path.join(SITE_DIR, CONTENT_REL)
+    if not os.path.exists(p):
+        return {}
+    try:
+        with open(p) as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def save_content(content):
+    raw = json.dumps(content, indent=2).encode()
+    if GITHUB_TOKEN:
+        gh_put_file(SITE_REPO, CONTENT_REL, raw, "Update site content from admin")
+    else:
+        with open(os.path.join(SITE_DIR, CONTENT_REL), "wb") as f:
+            f.write(raw)
+
+
+def save_image(key, raw_bytes):
+    """Store an uploaded homepage photo; returns its site-relative path."""
+    rel = f"{UPLOADS_REL}/{key}.jpg"
+    if GITHUB_TOKEN:
+        gh_put_file(SITE_REPO, rel, raw_bytes, f"Update homepage photo {key}")
+    else:
+        p = os.path.join(SITE_DIR, UPLOADS_REL)
+        os.makedirs(p, exist_ok=True)
+        with open(os.path.join(SITE_DIR, rel), "wb") as f:
+            f.write(raw_bytes)
+    return rel
+
+
+# ---------------------------------------------------------------- email
 def is_valid_email(email):
     return bool(re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email or ""))
 
 
 def send_code_email(email, code):
-    """Stand-in for a real email provider (SMTP / Resend / SendGrid / ...).
-    No credentials are configured for this local prototype, so the code is
-    just printed here — read it from this terminal to complete signup."""
-    print(f"\n{'='*50}\n  VERIFICATION CODE for {email}: {code}\n  (valid for {CODE_TTL_SECONDS // 60} minutes)\n{'='*50}\n")
+    """Email the code via Resend; without an API key, print it to the log."""
+    if not RESEND_API_KEY:
+        print(f"\n{'='*50}\n  VERIFICATION CODE for {email}: {code}\n  (valid for {CODE_TTL_SECONDS // 60} minutes)\n{'='*50}\n")
+        return
+    req = urllib.request.Request("https://api.resend.com/emails", method="POST")
+    req.add_header("Authorization", f"Bearer {RESEND_API_KEY}")
+    req.add_header("Content-Type", "application/json")
+    body = json.dumps({
+        "from": EMAIL_FROM,
+        "to": [email],
+        "subject": f"{code} is your Cherish verification code",
+        "html": (
+            "<div style=\"font-family:Georgia,serif;max-width:420px;margin:0 auto;"
+            "padding:32px;color:#2B2620\">"
+            "<h2 style=\"font-weight:400;letter-spacing:.08em\">Cherish</h2>"
+            "<p>Your verification code:</p>"
+            f"<p style=\"font-size:2rem;letter-spacing:.3em;font-weight:600\">{code}</p>"
+            "<p style=\"color:#6B6357;font-size:.85rem\">It expires in 10 minutes. "
+            "If you didn't request this, you can ignore this email.</p></div>"
+        ),
+    }).encode()
+    urllib.request.urlopen(req, body, timeout=15)
+    print(f"[email] verification code sent to {email}")
 
 
+# ---------------------------------------------------------------- handler
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         print(f"[backend] {self.address_string()} - {fmt % args}")
@@ -68,7 +216,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-Admin-Key")
         self.end_headers()
         self.wfile.write(body)
 
@@ -82,32 +230,57 @@ class Handler(BaseHTTPRequestHandler):
         except json.JSONDecodeError:
             return {}
 
+    def _is_admin(self):
+        return self.headers.get("X-Admin-Key", "") == ADMIN_KEY
+
     def do_OPTIONS(self):
         self._send_json(204, {})
 
     def do_GET(self):
         if self.path in ("/", "/admin"):
-            # the users table lives in the site's admin dashboard, not here
             self.send_response(302)
-            self.send_header("Location", "http://localhost:8080/admin.html")
+            self.send_header("Location", "https://cherishthestudio.com/admin.html")
             self.end_headers()
             return
         if self.path == "/api/health":
-            return self._send_json(200, {"ok": True, "service": "cherish-backend"})
+            return self._send_json(200, {
+                "ok": True, "service": "cherish-backend",
+                "email": "resend" if RESEND_API_KEY else "log-only",
+                "storage": "github" if GITHUB_TOKEN else "local-files",
+            })
+        if self.path == "/api/content":
+            return self._send_json(200, {"ok": True, "content": load_content()})
         if self.path == "/api/admin/users":
+            if not self._is_admin():
+                return self._send_json(401, {"ok": False, "error": "Wrong admin key"})
             users = load_users()
             return self._send_json(200, {"ok": True, "count": len(users), "users": users})
+        if self.path == "/api/admin/orders":
+            if not self._is_admin():
+                return self._send_json(401, {"ok": False, "error": "Wrong admin key"})
+            orders = load_orders()
+            return self._send_json(200, {"ok": True, "count": len(orders), "orders": orders})
         self._send_json(404, {"ok": False, "error": "not found"})
 
     def do_POST(self):
-        if self.path == "/api/auth/request-code":
-            return self._handle_request_code()
-        if self.path == "/api/auth/verify-code":
-            return self._handle_verify_code()
-        if self.path == "/api/auth/login":
-            return self._handle_login()
+        routes = {
+            "/api/auth/request-code": self._handle_request_code,
+            "/api/auth/verify-code": self._handle_verify_code,
+            "/api/auth/login": self._handle_login,
+            "/api/orders": self._handle_place_order,
+            "/api/admin/verify-key": self._handle_verify_key,
+            "/api/admin/content": self._handle_save_content,
+        }
+        handler = routes.get(self.path)
+        if handler:
+            try:
+                return handler()
+            except Exception as e:                     # noqa: BLE001 — surface any failure as JSON
+                print(f"[error] {self.path}: {e}")
+                return self._send_json(500, {"ok": False, "error": f"Server error: {e}"})
         self._send_json(404, {"ok": False, "error": "not found"})
 
+    # ---- auth ----
     def _handle_request_code(self):
         body = self._read_json_body()
         email = (body.get("email") or "").strip().lower()
@@ -116,8 +289,13 @@ class Handler(BaseHTTPRequestHandler):
 
         code = "".join(random.choices(string.digits, k=6))
         _pending_codes[email] = {"code": code, "expires": time.time() + CODE_TTL_SECONDS}
-        send_code_email(email, code)
-        return self._send_json(200, {"ok": True, "message": "Verification code sent — check the backend terminal"})
+        try:
+            send_code_email(email, code)
+        except Exception as e:                         # noqa: BLE001
+            print(f"[email] FAILED to send to {email}: {e} — code is {code}")
+            return self._send_json(502, {"ok": False, "error": "Couldn't send the email — try again in a minute"})
+        sent_via = "email" if RESEND_API_KEY else "backend log"
+        return self._send_json(200, {"ok": True, "message": f"Verification code sent via {sent_via}"})
 
     def _handle_verify_code(self):
         body = self._read_json_body()
@@ -170,10 +348,107 @@ class Handler(BaseHTTPRequestHandler):
         save_users(users)
         return self._send_json(200, {"ok": True, "user": user})
 
+    # ---- orders ----
+    def _handle_place_order(self):
+        """Checkout. The cart sends the signed-in customer + invoice lines;
+        the order id / tracking / status are minted here so every admin
+        device sees the same record."""
+        body = self._read_json_body()
+        email = (body.get("email") or "").strip().lower()
+        if not is_valid_email(email):
+            return self._send_json(400, {"ok": False, "error": "Please sign in before checking out"})
+        lines_in = body.get("lines")
+        if not isinstance(lines_in, list) or not lines_in:
+            return self._send_json(400, {"ok": False, "error": "Your bag is empty"})
+
+        lines = []
+        for l in lines_in[:50]:
+            if not isinstance(l, dict):
+                continue
+            lines.append({
+                "name": str(l.get("name", ""))[:120],
+                "detail": str(l.get("detail", ""))[:200],
+                "qty": max(1, int(l.get("qty", 1) or 1)),
+                "price": round(float(l.get("price", 0) or 0), 2),
+            })
+        if not lines:
+            return self._send_json(400, {"ok": False, "error": "Your bag is empty"})
+
+        orders = load_orders()
+        existing_ids = {o.get("id") for o in orders}
+        order_id = "CH" + "".join(random.choices(string.digits, k=5))
+        while order_id in existing_ids:
+            order_id = "CH" + "".join(random.choices(string.digits, k=5))
+
+        def _num(key):
+            try:
+                return round(float(body.get(key, 0) or 0), 2)
+            except (TypeError, ValueError):
+                return 0
+
+        order = {
+            "id": order_id,
+            "date": now_str(),
+            "email": email,
+            "name": (str(body.get("name", "")).strip() or email.split("@")[0])[:80],
+            "items": sum(l["qty"] for l in lines),
+            "lines": lines,
+            "subtotal": _num("subtotal"),
+            "shipping": _num("shipping"),
+            "total": _num("total"),
+            "status": "In production",
+            "tracking": "1Z" + "".join(random.choices(string.digits, k=9)),
+        }
+        orders.insert(0, order)
+        save_orders(orders)
+        print(f"[order] {order_id} — {email} — ${order['total']}")
+        return self._send_json(200, {"ok": True, "order": order})
+
+    # ---- admin ----
+    def _handle_verify_key(self):
+        if not self._is_admin():
+            return self._send_json(401, {"ok": False, "error": "Wrong admin key"})
+        return self._send_json(200, {"ok": True})
+
+    def _handle_save_content(self):
+        """Merge the provided sections into site content. Payload may contain:
+        cats (list|None), products (list|None), images ({key: dataURL}|None).
+        None means "reset that section to defaults". Uploaded images are
+        stored as real files; content keeps only their paths."""
+        if not self._is_admin():
+            return self._send_json(401, {"ok": False, "error": "Wrong admin key"})
+        body = self._read_json_body()
+        content = load_content()
+
+        for section in ("cats", "products"):
+            if section in body:
+                if body[section] is None:
+                    content.pop(section, None)
+                else:
+                    content[section] = body[section]
+
+        if "images" in body:
+            if body["images"] is None:
+                content.pop("images", None)
+            else:
+                stored = content.get("images", {})
+                for key, data_url in body["images"].items():
+                    if not re.match(r"^[\w-]+$", key):
+                        continue
+                    if isinstance(data_url, str) and data_url.startswith("data:image"):
+                        raw = base64.b64decode(data_url.split(",", 1)[1])
+                        stored[key] = save_image(key, raw)
+                content["images"] = stored
+
+        content["updatedAt"] = now_str()
+        save_content(content)
+        note = " (live site updates in ~1 minute)" if GITHUB_TOKEN else ""
+        return self._send_json(200, {"ok": True, "message": f"Saved{note}", "content": content})
+
 
 if __name__ == "__main__":
     server = ThreadingHTTPServer(("", PORT), Handler)
     print(f"Cherish backend on http://localhost:{PORT}")
-    print(f"Users table: http://localhost:8080/admin.html -> Registered Users tab")
-    print(f"Registered users stored in {USERS_FILE}\n")
+    print(f"  email:   {'Resend' if RESEND_API_KEY else 'log-only (codes print here)'}")
+    print(f"  storage: {'GitHub (' + SITE_REPO + ' / ' + DATA_REPO + ')' if GITHUB_TOKEN else 'local files'}")
     server.serve_forever()

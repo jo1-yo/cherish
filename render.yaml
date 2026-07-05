@@ -1,0 +1,22 @@
+# Render blueprint — deploys the Cherish backend as a free web service.
+# In Render: New + -> Blueprint -> pick the jo1-yo/cherish repo.
+services:
+  - type: web
+    name: cherishthestudio-backend   # "cherish-backend" is already taken on Render
+    runtime: python
+    plan: free
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: python backend/server.py
+    envVars:
+      - key: ADMIN_KEY          # dashboard passcode — pick something private
+        sync: false
+      - key: RESEND_API_KEY     # from resend.com -> API Keys
+        sync: false
+      - key: GITHUB_TOKEN       # fine-grained PAT: contents read/write on the two repos below
+        sync: false
+      - key: EMAIL_FROM
+        value: "Cherish <onboarding@resend.dev>"   # switch to hello@cherishthestudio.com after domain verify
+      - key: SITE_REPO
+        value: jo1-yo/cherish
+      - key: DATA_REPO
+        value: jo1-yo/cherish-data

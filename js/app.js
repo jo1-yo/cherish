@@ -23,12 +23,14 @@ let PRODUCTS = [
 try{ const _c=JSON.parse(localStorage.getItem('cherish_catalog')); if(Array.isArray(_c)&&_c.length) PRODUCTS=_c; }catch(e){}
 const fmt = n => '$' + Number(n).toFixed(0);
 
-/* ---------- Backend API (local dev only — see backend/server.py) ----------
-   Real signup (email verification code) and the admin "Registered Users"
-   view talk to this. It's only running on localhost:8082 during local
-   development; the deployed static site has no backend, so these calls
-   simply fail there (callers handle that and explain to the user). */
-const API_BASE = 'http://localhost:8082';
+/* ---------- Backend API (see backend/server.py) ----------
+   Signup (email verification code), sign-in and the admin dashboard all
+   talk to this. Local dev uses the local backend; the deployed site talks
+   to the Render deployment. */
+const API_BASE = localStorage.getItem('cherish_api_base') ||   // console override, no redeploy needed
+  (['localhost','127.0.0.1'].includes(location.hostname)
+    ? 'http://localhost:8082'
+    : 'https://cherishthestudio-backend.onrender.com');
 const Api = {
   async requestCode(email){
     return Api._post('/api/auth/request-code', {email});
@@ -39,14 +41,29 @@ const Api = {
   async login(email){
     return Api._post('/api/auth/login', {email});
   },
-  async listUsers(){
-    const res = await fetch(API_BASE+'/api/admin/users');
-    if(!res.ok) throw new Error('backend responded '+res.status);
-    return res.json();
+  async placeOrder(order){
+    return Api._post('/api/orders', order);
   },
-  async _post(path,body){
+  adminKey(){ return sessionStorage.getItem('cherish_admin_key') || ''; },
+  async verifyAdminKey(key){
+    return Api._post('/api/admin/verify-key', {}, key);
+  },
+  async listUsers(){ return Api._get('/api/admin/users'); },
+  async listOrders(){ return Api._get('/api/admin/orders'); },
+  async saveContent(payload){
+    return Api._post('/api/admin/content', payload);
+  },
+  async _get(path){
+    const res = await fetch(API_BASE+path, {headers:{'X-Admin-Key':Api.adminKey()}});
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok || !data.ok) throw new Error(data.error || ('backend responded '+res.status));
+    return data;
+  },
+  async _post(path,body,key){
     const res = await fetch(API_BASE+path, {
-      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
+      method:'POST',
+      headers:{'Content-Type':'application/json','X-Admin-Key':key ?? Api.adminKey()},
+      body:JSON.stringify(body)
     });
     const data = await res.json().catch(()=>({}));
     if(!res.ok || !data.ok) throw new Error(data.error || ('backend responded '+res.status));
@@ -238,10 +255,33 @@ function productCard(p){
   </a>`;
 }
 
-/* ---------- Homepage content (admin-editable) ---------- */
-/* Defaults live in index.html; the admin dashboard can override the four
-   category words and any photo slot. Overrides are saved in this browser
-   under 'cherish_home' = { cats:[...4], images:{ key:dataURL } }. */
+/* ---------- Site content (admin-editable, global) ----------
+   The admin dashboard saves homepage words/photos and the product catalogue
+   to the backend, which publishes them as site-content.json + image files
+   in the site itself. Every visitor's browser fetches that file below and
+   mirrors it into localStorage (which the existing render paths read), so
+   admin edits reach everyone — not just the admin's browser. */
+async function loadSiteContent(){
+  try{
+    const res = await fetch('site-content.json', {cache:'no-cache'});
+    if(!res.ok) return;                       // no published content yet
+    const c = await res.json();
+    if(Array.isArray(c.products) && c.products.length){
+      DB.set('catalog', c.products); PRODUCTS = c.products;
+    }
+    const home = {};
+    if(Array.isArray(c.cats)) home.cats = c.cats;
+    if(c.images && typeof c.images==='object') home.images = c.images;
+    if(Object.keys(home).length) DB.set('home', home);
+    else localStorage.removeItem('cherish_home');
+    if(typeof applyHomeContent==='function') applyHomeContent();
+  }catch(e){ /* offline or file absent — bundled defaults apply */ }
+}
+document.addEventListener('DOMContentLoaded', loadSiteContent);
+
+/* ---------- Homepage content overrides ---------- */
+/* Defaults live in index.html; loadSiteContent() mirrors published edits
+   into 'cherish_home' = { cats:[...4], images:{ key:path } }. */
 const HOME_DEFAULT_CATS = ['Sustainable','Ethical','Unique','Limited Collection'];
 function getHome(){ const h=DB.get('home',{}); return (h&&typeof h==='object')?h:{}; }
 function applyHomeContent(){

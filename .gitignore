@@ -1,3 +1,5 @@
 .DS_Store
 *.pdf
 backend/data/
+site-content.json
+images/uploads/
