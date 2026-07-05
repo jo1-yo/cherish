@@ -122,17 +122,23 @@ const I = {
   user:'<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>',
   menu:'<svg viewBox="0 0 24 24"><line x1="3" y1="7" x2="21" y2="7"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="17" x2="21" y2="17"/></svg>',
   instagram:'<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1.1" fill="currentColor" stroke="none"/></svg>',
+  tiktok:'<svg viewBox="0 0 24 24"><path d="M14 3v11.15a4.15 4.15 0 1 1-4.15-4.15c.42 0 .82.06 1.15.18v2.78a1.65 1.65 0 1 0 1.15 1.57V3h2.63c.36 2.24 1.78 3.72 4.22 4.2v2.76a7.18 7.18 0 0 1-5-2.04z"/></svg>',
 };
 
 /* Instagram handle for the brand */
 const INSTAGRAM_URL = 'https://www.instagram.com/cherishthestudio?igsh=MWM3MWF0bnNvcnRmeQ==';
+const TIKTOK_URL = 'https://www.tiktok.com/@cherishthestudio?_r=1&_t=ZP-97mw7nmm6n8';
 
 /* ---------- Header & Footer injection ---------- */
+function updateChromeVars(){
+  const head=document.getElementById('site-head');
+  document.documentElement.style.setProperty('--site-head-h', `${head ? head.offsetHeight : 0}px`);
+}
 function renderHeader(active){
   const head = document.getElementById('site-head');
   if(!head) return;
   head.innerHTML = `
-  <div class="ticker">Complimentary shipping on first orders · Made to order in New York</div>
+  <div class="ticker">Made in New York, just for you.</div>
   <header class="site-head">
     <div class="nav">
       <button class="menu-toggle" aria-label="Menu" onclick="menuClick()">${I.menu}</button>
@@ -140,7 +146,7 @@ function renderHeader(active){
         <button class="nav-close" aria-label="Close menu" onclick="menuClick()">&times;</button>
         <a href="about.html"  class="${active==='about'?'active':''}">About</a>
         <a href="shop.html"   class="${active==='shop'?'active':''}">Shop</a>
-        <a href="index.html" class="brand" aria-label="Cherish — home"><img src="images/logo-wordmark.jpg" alt="Cherish"></a>
+        <a href="/" class="brand" aria-label="Cherish — home"><img src="images/logo-wordmark.jpg" alt="Cherish"></a>
         <a href="custom.html" class="${active==='custom'?'active':''}">Custom</a>
         <a href="login.html"  class="${active==='login'?'active':''}" id="nav-account">Login</a>
       </nav>
@@ -149,6 +155,7 @@ function renderHeader(active){
         <a class="icon-btn heart" href="favorites.html" aria-label="Favorites">${I.heart}<span class="badge" id="b-fav"></span></a>
         <a class="icon-btn cart" href="cart.html" aria-label="Cart" onclick="return cartGate(event)">${I.bag}<span class="badge" id="b-cart"></span></a>
         <a class="icon-btn ig" href="${INSTAGRAM_URL}" target="_blank" rel="noopener" aria-label="Instagram">${I.instagram}</a>
+        <a class="icon-btn tt" href="${TIKTOK_URL}" target="_blank" rel="noopener" aria-label="TikTok">${I.tiktok}</a>
       </div>
     </div>
     <div class="search-bar" id="searchbar">
@@ -164,6 +171,7 @@ function renderHeader(active){
   const acc = document.getElementById('nav-account');
   if(Auth.in() && acc){ acc.textContent='Account'; acc.href='account.html'; }
   updateBadges();
+  updateChromeVars();
 }
 
 function renderFooter(){
@@ -317,4 +325,5 @@ function applyHomeContent(){
   });
 }
 
-document.addEventListener('DOMContentLoaded',()=>{ updateBadges(); });
+window.addEventListener('resize', updateChromeVars);
+document.addEventListener('DOMContentLoaded',()=>{ updateBadges(); updateChromeVars(); });

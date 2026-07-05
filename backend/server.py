@@ -16,7 +16,7 @@ Configuration is all environment variables (sane local defaults):
   RESEND_API_KEY    if set, verification codes are emailed via resend.com;
                     if unset, codes are printed to this log (local dev)
   EMAIL_FROM        sender, e.g. "Cherish <hello@cherishthestudio.com>"
-                    (default Resend sandbox sender)
+                    (default Cherish domain sender)
   GITHUB_TOKEN      if set, storage moves to GitHub (Render's free disk is
                     ephemeral): users -> DATA_REPO, content+images -> SITE_REPO
                     (committing to SITE_REPO redeploys GitHub Pages, so edits
@@ -26,8 +26,14 @@ Configuration is all environment variables (sane local defaults):
 
 Run locally:  python3 backend/server.py [port]
 """
-import base64, json, os, random, re, string, sys, time, urllib.error, urllib.request
+import base64, datetime, json, os, random, re, string, sys, time, urllib.error, urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+try:
+    from zoneinfo import ZoneInfo
+    NY_TZ = ZoneInfo("America/New_York")
+except Exception:                                      # no tzdata on the host
+    NY_TZ = datetime.timezone(datetime.timedelta(hours=-5), "EST")
 
 # line-buffer stdout so verification codes show up in Render/log files immediately
 try:
@@ -41,7 +47,7 @@ SITE_DIR = os.path.dirname(BACKEND_DIR)
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get("PORT", 8082))
 ADMIN_KEY = os.environ.get("ADMIN_KEY", "cherish")
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
-EMAIL_FROM = os.environ.get("EMAIL_FROM", "Cherish <onboarding@resend.dev>")
+EMAIL_FROM = os.environ.get("EMAIL_FROM") or "Cherish <hello@cherishthestudio.com>"
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 SITE_REPO = os.environ.get("SITE_REPO", "jo1-yo/cherish")
 DATA_REPO = os.environ.get("DATA_REPO", "jo1-yo/cherish-data")
@@ -52,7 +58,8 @@ _pending_codes = {}
 
 
 def now_str():
-    return time.strftime("%Y-%m-%d %H:%M:%S")
+    """New York time — all timestamps the admin dashboard shows."""
+    return datetime.datetime.now(NY_TZ).strftime("%Y-%m-%d %H:%M:%S")
 
 
 # ---------------------------------------------------------------- GitHub API
@@ -209,7 +216,16 @@ def send_code_email(email, code):
             "If you didn't request this, you can ignore this email.</p></div>"
         ),
     }).encode()
-    urllib.request.urlopen(req, body, timeout=15)
+    try:
+        urllib.request.urlopen(req, body, timeout=15)
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode("utf-8", "replace")
+        try:
+            payload = json.loads(detail)
+            detail = payload.get("message") or payload.get("error") or detail
+        except json.JSONDecodeError:
+            pass
+        raise RuntimeError(f"Resend rejected the email: {detail}") from e
     print(f"[email] verification code sent to {email}")
 
 
@@ -241,6 +257,11 @@ class Handler(BaseHTTPRequestHandler):
 
     def _is_admin(self):
         return self.headers.get("X-Admin-Key", "") == ADMIN_KEY
+
+    def _client_ip(self):
+        """Real visitor IP — Render sits behind a proxy, so prefer X-Forwarded-For."""
+        fwd = self.headers.get("X-Forwarded-For", "")
+        return (fwd.split(",")[0].strip() if fwd else "") or self.client_address[0]
 
     def do_OPTIONS(self):
         self._send_json(204, {})
@@ -307,8 +328,11 @@ class Handler(BaseHTTPRequestHandler):
         try:
             send_code_email(email, code)
         except Exception as e:                         # noqa: BLE001
-            print(f"[email] FAILED to send to {email}: {e} — code is {code}")
-            return self._send_json(502, {"ok": False, "error": "Couldn't send the email — try again in a minute"})
+            detail = str(e)
+            print(f"[email] FAILED to send to {email}: {detail} — code is {code}")
+            if "testing emails" in detail.lower():
+                detail = "Resend is still in test mode. Verify cherishthestudio.com in Resend and send from hello@cherishthestudio.com."
+            return self._send_json(502, {"ok": False, "error": f"Couldn't send the email: {detail}"})
         sent_via = "email" if RESEND_API_KEY else "backend log"
         return self._send_json(200, {"ok": True, "message": f"Verification code sent via {sent_via}"})
 
@@ -430,7 +454,7 @@ class Handler(BaseHTTPRequestHandler):
         entries = load_interest()
         if any(e.get("email") == email for e in entries):
             return self._send_json(200, {"ok": True, "already": True})
-        entries.insert(0, {"email": email, "joinedAt": now_str(), "source": source})
+        entries.insert(0, {"email": email, "joinedAt": now_str(), "source": source, "ip": self._client_ip()})
         save_interest(entries)
         print(f"[interest] {email} joined via {source}")
         return self._send_json(200, {"ok": True, "already": False})

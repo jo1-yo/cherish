@@ -60,7 +60,7 @@
       document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
       document.getElementById('p-'+a.dataset.p).classList.add('active'); };
   });
-  document.getElementById('logout').onclick=()=>{ Auth.logout(); toast('Signed out'); setTimeout(()=>location.href='index.html',500); };
+  document.getElementById('logout').onclick=()=>{ Auth.logout(); toast('Signed out'); setTimeout(()=>location.href='/',500); };
 
   // orders (from past checkouts)
   const orders=DB.get('orders',[]);

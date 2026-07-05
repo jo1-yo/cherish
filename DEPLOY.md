@@ -30,7 +30,7 @@
 1. https://resend.com 注册 → **API Keys** → 创建,填到 Render 环境变量 `RESEND_API_KEY`
 2. 没验证域名前,只能发到你自己的注册邮箱(测试够用)
 3. 正式对外:**Domains** → Add `cherishthestudio.com` → 把页面给出的几条 DNS 记录(MX + 两条 TXT)加到 Squarespace 的 DNS 设置里 → 等验证通过
-4. Render 环境变量 `EMAIL_FROM` 改成 `Cherish <hello@cherishthestudio.com>` → Manual Deploy 重启
+4. 确认 Render 环境变量 `EMAIL_FROM` 是 `Cherish <hello@cherishthestudio.com>` → Manual Deploy 重启
 
 ## 四、验证
 

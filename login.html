@@ -86,7 +86,7 @@
     document.getElementById('register-form').style.display='block';
   };
   window.resendCode=async()=>{
-    try{ await Api.requestCode(pendingEmail); toast('New code sent — check the backend terminal'); }
+    try{ await Api.requestCode(pendingEmail); toast('New code sent — check your email'); }
     catch(err){ toast(err.message); }
   };
 
@@ -103,7 +103,7 @@
       document.getElementById('register-form').style.display='none';
       document.getElementById('verify-form').style.display='block';
       document.getElementById('rg-code').focus();
-      toast('Code sent — check the backend terminal');
+      toast('Code sent — check your email');
     }catch(err){
       toast(err.message.includes('fetch')
         ? 'Backend not running — start it with: python3 backend/server.py'

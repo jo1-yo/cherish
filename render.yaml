@@ -15,7 +15,7 @@ services:
       - key: GITHUB_TOKEN       # fine-grained PAT: contents read/write on the two repos below
         sync: false
       - key: EMAIL_FROM
-        value: "Cherish <onboarding@resend.dev>"   # switch to hello@cherishthestudio.com after domain verify
+        value: "Cherish <hello@cherishthestudio.com>"   # requires the domain to be verified in Resend
       - key: SITE_REPO
         value: jo1-yo/cherish
       - key: DATA_REPO

@@ -63,7 +63,7 @@
   <div class="adm-top">
     <span class="logo">Cherish</span>
     <span class="tag">Admin Dashboard</span>
-    <a href="index.html" class="link-underline" style="font-size:.68rem">View Site →</a>
+    <a href="/" class="link-underline" style="font-size:.68rem">View Site →</a>
   </div>
 
   <div class="adm-wrap">
@@ -323,7 +323,7 @@
       const {users,count}=await Api.listUsers();
       setKpi('kpi-users',count);
       el.innerHTML = users.length
-        ? `<table><thead><tr><th>Name</th><th>Email</th><th>Registered</th><th>Last Login</th><th>Logins</th></tr></thead><tbody>${
+        ? `<table><thead><tr><th>Name</th><th>Email</th><th>Registered (EST)</th><th>Last Login (EST)</th><th>Logins</th></tr></thead><tbody>${
             users.map(u=>`<tr><td>${esc(u.name)}</td><td>${esc(u.email)}</td><td>${esc(u.registeredAt)}</td><td>${esc(u.lastLoginAt)||'—'}</td><td>${u.loginCount||0}</td></tr>`).join('')}</tbody></table>`
         : '<p class="muted">No one has signed up yet — try it at <a href="login.html?tab=register" class="link-underline">login.html</a>.</p>';
     }catch(err){
@@ -337,7 +337,7 @@
       setKpi('kpi-orders',count);
       setKpi('kpi-revenue',fmt(orders.reduce((s,o)=>s+(o.total||0),0)));
       el.innerHTML = orders.length
-        ? `<table><thead><tr><th>Order</th><th>Date</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Tracking</th><th>Invoice</th></tr></thead><tbody>${
+        ? `<table><thead><tr><th>Order</th><th>Date (EST)</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Tracking</th><th>Invoice</th></tr></thead><tbody>${
             orders.map(o=>`<tr>
               <td><b>${esc(o.id)}</b></td><td>${esc(o.date)}</td>
               <td>${esc(o.name)}<br><span class="inv">${esc(o.email)}</span></td>
@@ -356,8 +356,8 @@
       const {interest,count}=await Api.listInterest();
       setKpi('kpi-interest',count);
       el.innerHTML = interest.length
-        ? `<table><thead><tr><th>Email</th><th>Joined</th><th style="width:130px">Source</th></tr></thead><tbody>${
-            interest.map(e=>`<tr><td>${esc(e.email)}</td><td>${esc(e.joinedAt)}</td><td>${esc(e.source)||'site'}</td></tr>`).join('')}</tbody></table>`
+        ? `<table><thead><tr><th>Email</th><th>Joined (EST)</th><th style="width:130px">Source</th><th style="width:140px">IP Address</th></tr></thead><tbody>${
+            interest.map(e=>`<tr><td>${esc(e.email)}</td><td>${esc(e.joinedAt)}</td><td>${esc(e.source)||'site'}</td><td>${esc(e.ip)||'—'}</td></tr>`).join('')}</tbody></table>`
         : '<p class="muted">No signups yet — the invite appears after a few seconds on the homepage.</p>';
     }catch(err){
       el.innerHTML = /admin key/i.test(err.message) ? needKey : backendDown;
