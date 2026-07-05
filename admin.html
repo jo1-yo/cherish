@@ -358,7 +358,7 @@
       el.innerHTML = interest.length
         ? `<table><thead><tr><th>Email</th><th>Joined</th><th style="width:130px">Source</th></tr></thead><tbody>${
             interest.map(e=>`<tr><td>${esc(e.email)}</td><td>${esc(e.joinedAt)}</td><td>${esc(e.source)||'site'}</td></tr>`).join('')}</tbody></table>`
-        : '<p class="muted">No signups yet — the invite appears when a visitor scrolls to “More Pictures” on the homepage.</p>';
+        : '<p class="muted">No signups yet — the invite appears after a few seconds on the homepage.</p>';
     }catch(err){
       el.innerHTML = /admin key/i.test(err.message) ? needKey : backendDown;
     }

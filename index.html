@@ -87,7 +87,7 @@
   applyHomeContent();   // apply any admin overrides (category words + photos)
 
   // ---- The List invite: every visit while the visitor is signed out and not
-  //      yet subscribed; shows when More Pictures scrolls into view ----
+  //      yet subscribed; shows after 3 seconds on the homepage ----
   const listModal=document.getElementById('list-modal');
   function openListModal(){
     listModal.classList.add('open');
@@ -100,12 +100,8 @@
   listModal.addEventListener('click',e=>{ if(e.target===listModal) closeListModal(); });
   document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeListModal(); });
 
-  if(!Auth.in() && !localStorage.getItem('cherish_interest_joined')
-     && 'IntersectionObserver' in window){
-    const io=new IntersectionObserver(entries=>{
-      if(entries.some(e=>e.isIntersecting)){ io.disconnect(); openListModal(); }
-    },{threshold:.35});
-    io.observe(document.querySelector('.fp-strip'));
+  if(!Auth.in() && !localStorage.getItem('cherish_interest_joined')){
+    setTimeout(openListModal, 3000);
   }
 </script>
 </body>
