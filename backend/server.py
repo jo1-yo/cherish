@@ -201,7 +201,9 @@ def send_code_email(email, code):
         return
     req = urllib.request.Request("https://api.resend.com/emails", method="POST")
     req.add_header("Authorization", f"Bearer {RESEND_API_KEY}")
+    req.add_header("Accept", "application/json")
     req.add_header("Content-Type", "application/json")
+    req.add_header("User-Agent", "CherishBackend/1.0 (hello@cherishthestudio.com)")
     body = json.dumps({
         "from": EMAIL_FROM,
         "to": [email],
