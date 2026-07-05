@@ -23,6 +23,34 @@ let PRODUCTS = [
 try{ const _c=JSON.parse(localStorage.getItem('cherish_catalog')); if(Array.isArray(_c)&&_c.length) PRODUCTS=_c; }catch(e){}
 const fmt = n => '$' + Number(n).toFixed(0);
 
+/* ---------- Backend API (local dev only — see backend/server.py) ----------
+   Real signup (email verification code) and the admin "Registered Users"
+   view talk to this. It's only running on localhost:8082 during local
+   development; the deployed static site has no backend, so these calls
+   simply fail there (callers handle that and explain to the user). */
+const API_BASE = 'http://localhost:8082';
+const Api = {
+  async requestCode(email){
+    return Api._post('/api/auth/request-code', {email});
+  },
+  async verifyCode(email,code,name){
+    return Api._post('/api/auth/verify-code', {email,code,name});
+  },
+  async listUsers(){
+    const res = await fetch(API_BASE+'/api/admin/users');
+    if(!res.ok) throw new Error('backend responded '+res.status);
+    return res.json();
+  },
+  async _post(path,body){
+    const res = await fetch(API_BASE+path, {
+      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
+    });
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok || !data.ok) throw new Error(data.error || ('backend responded '+res.status));
+    return data;
+  },
+};
+
 /* ---------- Storage ---------- */
 const DB = {
   get(k,d){ try{ return JSON.parse(localStorage.getItem('cherish_'+k)) ?? d }catch(e){ return d } },

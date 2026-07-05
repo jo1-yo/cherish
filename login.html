@@ -27,12 +27,21 @@
     <p class="form-note">No account yet? <a href="#" onclick="switchTab('register');return false;">Sign up</a></p>
   </form>
 
+  <!-- Step 1: enter email (+ name), request a verification code -->
   <form id="register-form" style="display:none">
     <div class="field"><label>Name</label><input type="text" id="rg-name" placeholder="First name"></div>
     <div class="field"><label>Email</label><input type="email" id="rg-email" required placeholder="you@email.com"></div>
-    <div class="field"><label>Password</label><input type="password" id="rg-pass" required placeholder="Choose a password"></div>
-    <button class="btn block gold" type="submit">Sign Up</button>
+    <p class="muted" style="font-size:.78rem;margin:-10px 0 20px">We'll email a 6-digit code to verify it's really you.</p>
+    <button class="btn block gold" type="submit">Send Verification Code</button>
     <p class="form-note">Already with us? <a href="#" onclick="switchTab('login');return false;">Sign in</a></p>
+  </form>
+
+  <!-- Step 2: enter the code that was emailed -->
+  <form id="verify-form" style="display:none">
+    <p class="muted" style="font-size:.84rem;margin-bottom:20px">Enter the 6-digit code sent to <b id="verify-email-label"></b>.</p>
+    <div class="field"><label>Verification Code</label><input type="text" id="rg-code" inputmode="numeric" maxlength="6" placeholder="000000" required></div>
+    <button class="btn block gold" type="submit">Verify &amp; Create Account</button>
+    <p class="form-note"><a href="#" onclick="backToRegister();return false;">Use a different email</a> · <a href="#" onclick="resendCode();return false;">Resend code</a></p>
   </form>
 </div>
 
@@ -46,6 +55,7 @@
     document.querySelectorAll('.auth-tab').forEach(x=>x.classList.toggle('active',x.dataset.tab===t));
     document.getElementById('login-form').style.display   = t==='login'?'block':'none';
     document.getElementById('register-form').style.display= t==='register'?'block':'none';
+    document.getElementById('verify-form').style.display  = 'none';
   };
   document.querySelectorAll('.auth-tab').forEach(b=>b.addEventListener('click',()=>switchTab(b.dataset.tab)));
   // allow ?tab=register to open directly on the register form
@@ -56,10 +66,48 @@
     Auth.login(document.getElementById('li-email').value);
     toast('Welcome back'); setTimeout(()=>location.href=next,600);
   };
-  document.getElementById('register-form').onsubmit=e=>{
+
+  window.backToRegister=()=>{
+    document.getElementById('verify-form').style.display='none';
+    document.getElementById('register-form').style.display='block';
+  };
+  window.resendCode=async()=>{
+    try{ await Api.requestCode(pendingEmail); toast('New code sent — check the backend terminal'); }
+    catch(err){ toast(err.message); }
+  };
+
+  let pendingEmail='', pendingName='';
+  document.getElementById('register-form').onsubmit=async e=>{
     e.preventDefault();
-    Auth.login(document.getElementById('rg-email').value, document.getElementById('rg-name').value);
-    toast('Account created'); setTimeout(()=>location.href=next,600);
+    pendingEmail=document.getElementById('rg-email').value.trim();
+    pendingName=document.getElementById('rg-name').value.trim();
+    const btn=e.target.querySelector('button[type=submit]');
+    btn.disabled=true; btn.textContent='Sending…';
+    try{
+      await Api.requestCode(pendingEmail);
+      document.getElementById('verify-email-label').textContent=pendingEmail;
+      document.getElementById('register-form').style.display='none';
+      document.getElementById('verify-form').style.display='block';
+      document.getElementById('rg-code').focus();
+      toast('Code sent — check the backend terminal');
+    }catch(err){
+      toast(err.message.includes('fetch')
+        ? 'Backend not running — start it with: python3 backend/server.py'
+        : err.message);
+    }finally{ btn.disabled=false; btn.textContent='Send Verification Code'; }
+  };
+
+  document.getElementById('verify-form').onsubmit=async e=>{
+    e.preventDefault();
+    const code=document.getElementById('rg-code').value.trim();
+    const btn=e.target.querySelector('button[type=submit]');
+    btn.disabled=true; btn.textContent='Verifying…';
+    try{
+      const {user}=await Api.verifyCode(pendingEmail,code,pendingName);
+      Auth.login(user.email,user.name);
+      toast('Account created'); setTimeout(()=>location.href=next,600);
+    }catch(err){ toast(err.message); }
+    finally{ btn.disabled=false; btn.textContent='Verify & Create Account'; }
   };
 </script>
 </body>

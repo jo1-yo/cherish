@@ -73,6 +73,7 @@
       <button class="adm-tab active" data-p="orders">Orders</button>
       <button class="adm-tab" data-p="products">Products</button>
       <button class="adm-tab" data-p="homepage">Homepage</button>
+      <button class="adm-tab" data-p="users">Registered Users</button>
       <button class="adm-tab" data-p="activity">Customer Activity</button>
     </div>
 
@@ -114,6 +115,15 @@
 
       <div class="home-group-title">“More Pictures” strip</div>
       <div class="home-imgs" id="home-more"></div>
+    </div>
+
+    <!-- REGISTERED USERS (real backend — see backend/server.py) -->
+    <div class="panel" id="p-users">
+      <div class="bar"><h2>Registered Users</h2>
+        <div class="row-btns"><button class="mini" onclick="loadUsers()">Refresh</button></div>
+      </div>
+      <p class="note">Sourced from the local backend (email-verified signups via login.html), not from this browser's storage. Requires <code>python3 backend/server.py</code> running on port 8082.</p>
+      <div id="users-panel"><p class="muted">Loading…</p></div>
     </div>
 
     <!-- ACTIVITY -->
@@ -268,6 +278,22 @@
     renderHome(); toast('Homepage reset to default');
   };
   renderHome();
+
+  // ---- registered users (real backend) ----
+  window.loadUsers=async()=>{
+    const el=document.getElementById('users-panel');
+    el.innerHTML='<p class="muted">Loading…</p>';
+    try{
+      const {users}=await Api.listUsers();
+      el.innerHTML = users.length
+        ? `<table><thead><tr><th>Name</th><th>Email</th><th>Registered</th></tr></thead><tbody>${
+            users.map(u=>`<tr><td>${u.name}</td><td>${u.email}</td><td>${u.registeredAt}</td></tr>`).join('')}</tbody></table>`
+        : '<p class="muted">No one has signed up yet — try it at <a href="login.html?tab=register" class="link-underline">login.html</a>.</p>';
+    }catch(err){
+      el.innerHTML = `<p class="note" style="border-left-color:#b01e17">Couldn't reach the backend — start it with <code>python3 backend/server.py</code>, then click Refresh.</p>`;
+    }
+  };
+  document.querySelector('.adm-tab[data-p="users"]').addEventListener('click', loadUsers);
 </script>
 </body>
 </html>
