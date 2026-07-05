@@ -68,16 +68,16 @@
 
 </main>
 
-<!-- THE LIST — invite shown once, when the visitor reaches More Pictures -->
+<!-- THE LIST — invite for signed-out visitors, when they reach More Pictures -->
 <div class="list-modal" id="list-modal" role="dialog" aria-modal="true" aria-labelledby="list-modal-title">
   <div class="card">
     <button class="close" aria-label="Close" onclick="closeListModal()">&times;</button>
-    <p class="eyebrow">The List</p>
-    <h3 id="list-modal-title">For the extra sparkle</h3>
-    <p>Early access to limited drops and new made-to-order pieces — a note from the studio, only when it matters.</p>
+    <h3 id="list-modal-title">JOIN THE LIST</h3>
+    <p class="lead">Stay close to Cherish the Studio.</p>
+    <p>Be the first to hear about new collections, limited drops, studio updates, and our latest newsletters.</p>
     <input type="email" id="list-email" placeholder="Email address" autocomplete="email"
       onkeydown="if(event.key==='Enter')joinListModal()">
-    <button class="btn gold block" onclick="joinListModal()">Join the List</button>
+    <button class="btn gold block" onclick="joinListModal()">Subscribe</button>
   </div>
 </div>
 
@@ -86,11 +86,10 @@
   renderHeader('home');
   applyHomeContent();   // apply any admin overrides (category words + photos)
 
-  // ---- The List invite: once per visitor, when More Pictures scrolls into view ----
+  // ---- The List invite: every visit while the visitor is signed out and not
+  //      yet subscribed; shows when More Pictures scrolls into view ----
   const listModal=document.getElementById('list-modal');
   function openListModal(){
-    localStorage.setItem('cherish_interest_prompted','1');   // once ever, even if dismissed
-    const me=Auth.user(); if(me&&me.email) document.getElementById('list-email').value=me.email;
     listModal.classList.add('open');
     setTimeout(()=>document.getElementById('list-email').focus(),450);
   }
@@ -101,7 +100,7 @@
   listModal.addEventListener('click',e=>{ if(e.target===listModal) closeListModal(); });
   document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeListModal(); });
 
-  if(!localStorage.getItem('cherish_interest_prompted') && !localStorage.getItem('cherish_interest_joined')
+  if(!Auth.in() && !localStorage.getItem('cherish_interest_joined')
      && 'IntersectionObserver' in window){
     const io=new IntersectionObserver(entries=>{
       if(entries.some(e=>e.isIntersecting)){ io.disconnect(); openListModal(); }

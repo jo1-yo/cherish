@@ -627,17 +627,19 @@ section{padding:96px 0}
 .list-modal{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;
   padding:20px;background:rgba(43,38,32,.45);opacity:0;pointer-events:none;transition:opacity .4s ease}
 .list-modal.open{opacity:1;pointer-events:auto}
-.list-modal .card{position:relative;background:var(--ivory);border:1px solid var(--ink);max-width:400px;width:100%;
-  padding:44px 38px 38px;text-align:center;transform:translateY(14px);transition:transform .45s cubic-bezier(.2,.9,.3,1)}
+.list-modal .card{position:relative;background:var(--ivory);border:1px solid var(--ink);max-width:600px;width:100%;
+  padding:70px 64px 60px;text-align:center;transform:translateY(14px);transition:transform .45s cubic-bezier(.2,.9,.3,1)}
 .list-modal.open .card{transform:translateY(0)}
-.list-modal .close{position:absolute;top:10px;right:14px;font-size:1.5rem;line-height:1;color:var(--soft-ink);
+.list-modal .close{position:absolute;top:14px;right:18px;font-size:1.7rem;line-height:1;color:var(--soft-ink);
   background:none;border:none;cursor:pointer;padding:6px}
 .list-modal .close:hover{color:var(--ink)}
-.list-modal h3{font-size:2rem;margin:12px 0 10px}
-.list-modal p{font-size:.9rem;color:var(--soft-ink);margin-bottom:24px}
-.list-modal input{width:100%;border:1px solid var(--line);background:var(--white);padding:13px 14px;
-  font-family:var(--sans);font-size:.9rem;text-align:center;margin-bottom:12px}
+.list-modal h3{font-size:clamp(2rem,4.5vw,2.7rem);letter-spacing:.08em;margin:0 0 22px}
+.list-modal .lead{font-size:1.05rem;color:var(--ink);margin-bottom:10px}
+.list-modal p{font-size:.94rem;line-height:1.7;color:var(--soft-ink);margin-bottom:30px}
+.list-modal input{width:100%;border:1px solid var(--line);background:var(--white);padding:16px 14px;
+  font-family:var(--sans);font-size:.94rem;text-align:center;margin-bottom:14px}
 .list-modal input:focus{outline:none;border-color:var(--gold-deep)}
+@media(max-width:600px){.list-modal .card{padding:52px 26px 40px}}
 
 /* shop — coming-soon veil (remove the "soon" class on <main> to relaunch) */
 .shop-main.soon{position:relative}
