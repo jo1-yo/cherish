@@ -278,7 +278,9 @@ def verify_password(password, stored):
 
 
 def public_user(user):
-    return {k: v for k, v in dict(user or {}).items() if k != "passwordHash"}
+    clean = {k: v for k, v in dict(user or {}).items() if k != "passwordHash"}
+    clean["hasPassword"] = bool((user or {}).get("passwordHash"))
+    return clean
 
 
 def send_code_email(email, code):
@@ -454,6 +456,9 @@ class Handler(BaseHTTPRequestHandler):
             if name:
                 existing["name"] = name
             existing["passwordHash"] = hash_password(password)
+            existing.setdefault("registeredAt", now_str())
+            existing["lastLoginAt"] = now_str()
+            existing["loginCount"] = int(existing.get("loginCount", 0)) + 1
             user = existing
         else:
             user = {

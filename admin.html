@@ -353,8 +353,8 @@
       const {users,count}=await Api.listUsers();
       setKpi('kpi-users',count);
       el.innerHTML = users.length
-        ? `<table><thead><tr><th>Name</th><th>Email</th><th>Registered (Local)</th><th>Last Login (Local)</th><th>Logins</th></tr></thead><tbody>${
-            users.map(u=>`<tr><td>${esc(u.name)}</td><td>${esc(u.email)}</td><td>${fmtTime(u.registeredAt)}</td><td>${fmtTime(u.lastLoginAt)}</td><td>${u.loginCount||0}</td></tr>`).join('')}</tbody></table>`
+        ? `<table><thead><tr><th>Name</th><th>Email</th><th>Password</th><th>Registered (Local)</th><th>Last Login (Local)</th><th>Logins</th></tr></thead><tbody>${
+            users.map(u=>`<tr><td>${esc(u.name)}</td><td>${esc(u.email)}</td><td>${u.hasPassword?'Set':'Needs setup'}</td><td>${fmtTime(u.registeredAt)}</td><td>${fmtTime(u.lastLoginAt)}</td><td>${u.loginCount||0}</td></tr>`).join('')}</tbody></table>`
         : '<p class="muted">No one has signed up yet — try it at <a href="login.html?tab=register" class="link-underline">login.html</a>.</p>';
     }catch(err){
       el.innerHTML = isAccessError(err) ? needKey : backendDown;
