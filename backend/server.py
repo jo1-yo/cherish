@@ -12,7 +12,7 @@ What goes through here:
 
 Configuration is all environment variables (sane local defaults):
   PORT              port to listen on (Render injects this; local default 8082)
-  ADMIN_KEY         admin passcode for the dashboard + admin API (default "Cherish")
+  ADMIN_KEY         admin passcode for the dashboard + admin API
   RESEND_API_KEY    if set, verification codes are emailed via resend.com;
                     if unset, codes are printed to this log (local dev)
   EMAIL_FROM        sender, e.g. "Cherish <hello@cherishthestudio.com>"
@@ -45,9 +45,9 @@ BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
 SITE_DIR = os.path.dirname(BACKEND_DIR)
 
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get("PORT", 8082))
-ADMIN_KEY = (os.environ.get("ADMIN_KEY", "").strip() or "Cherish")
+ADMIN_KEY = (os.environ.get("ADMIN_KEY", "").strip() or "k9&7ty2@THEnew")
 if ADMIN_KEY.lower() == "cherish":
-    ADMIN_KEY = "Cherish"
+    ADMIN_KEY = "k9&7ty2@THEnew"
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 EMAIL_FROM = os.environ.get("EMAIL_FROM") or "Cherish <hello@cherishthestudio.com>"
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
