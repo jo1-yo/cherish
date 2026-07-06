@@ -183,6 +183,36 @@
 
   // backend strings (names, emails, order lines) are rendered via innerHTML — escape them
   const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const localTimeFmt=new Intl.DateTimeFormat(undefined,{
+    year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',
+    timeZoneName:'short'
+  });
+  function zoneOffsetMs(date,timeZone){
+    const parts=Object.fromEntries(new Intl.DateTimeFormat('en-US',{
+      timeZone,year:'numeric',month:'2-digit',day:'2-digit',
+      hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'
+    }).formatToParts(date).filter(p=>p.type!=='literal').map(p=>[p.type,p.value]));
+    const wallAsUtc=Date.UTC(+parts.year,+parts.month-1,+parts.day,+parts.hour,+parts.minute,+parts.second);
+    return wallAsUtc-date.getTime();
+  }
+  function nyWallTimeToDate(y,m,d,h,mi,s){
+    const wallAsUtc=Date.UTC(y,m-1,d,h,mi,s);
+    let date=new Date(wallAsUtc-zoneOffsetMs(new Date(wallAsUtc),'America/New_York'));
+    date=new Date(wallAsUtc-zoneOffsetMs(date,'America/New_York'));
+    return date;
+  }
+  function fmtTime(v){
+    const s=String(v||'').trim();
+    if(!s) return '—';
+    let d;
+    if(/[zZ]|[+-]\d\d:?\d\d$/.test(s)){
+      d=new Date(s);
+    }else{
+      const m=s.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})/);
+      if(m) d=nyWallTimeToDate(+m[1],+m[2],+m[3],+m[4],+m[5],+m[6]);
+    }
+    return d && !Number.isNaN(d.getTime()) ? esc(localTimeFmt.format(d)) : esc(s);
+  }
 
   function render(){
     const favs=DB.get('fav',[]), notes=DB.get('notes',[]), customs=DB.get('customs',[]);
@@ -323,8 +353,8 @@
       const {users,count}=await Api.listUsers();
       setKpi('kpi-users',count);
       el.innerHTML = users.length
-        ? `<table><thead><tr><th>Name</th><th>Email</th><th>Registered (EST)</th><th>Last Login (EST)</th><th>Logins</th></tr></thead><tbody>${
-            users.map(u=>`<tr><td>${esc(u.name)}</td><td>${esc(u.email)}</td><td>${esc(u.registeredAt)}</td><td>${esc(u.lastLoginAt)||'—'}</td><td>${u.loginCount||0}</td></tr>`).join('')}</tbody></table>`
+        ? `<table><thead><tr><th>Name</th><th>Email</th><th>Registered (Local)</th><th>Last Login (Local)</th><th>Logins</th></tr></thead><tbody>${
+            users.map(u=>`<tr><td>${esc(u.name)}</td><td>${esc(u.email)}</td><td>${fmtTime(u.registeredAt)}</td><td>${fmtTime(u.lastLoginAt)}</td><td>${u.loginCount||0}</td></tr>`).join('')}</tbody></table>`
         : '<p class="muted">No one has signed up yet — try it at <a href="login.html?tab=register" class="link-underline">login.html</a>.</p>';
     }catch(err){
       el.innerHTML = isAccessError(err) ? needKey : backendDown;
@@ -337,9 +367,9 @@
       setKpi('kpi-orders',count);
       setKpi('kpi-revenue',fmt(orders.reduce((s,o)=>s+(o.total||0),0)));
       el.innerHTML = orders.length
-        ? `<table><thead><tr><th>Order</th><th>Date (EST)</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Tracking</th><th>Invoice</th></tr></thead><tbody>${
+        ? `<table><thead><tr><th>Order</th><th>Date (Local)</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Tracking</th><th>Invoice</th></tr></thead><tbody>${
             orders.map(o=>`<tr>
-              <td><b>${esc(o.id)}</b></td><td>${esc(o.date)}</td>
+              <td><b>${esc(o.id)}</b></td><td>${fmtTime(o.date)}</td>
               <td>${esc(o.name)}<br><span class="inv">${esc(o.email)}</span></td>
               <td>${o.items||(o.lines?o.lines.length:'-')}</td>
               <td>${fmt(o.total||0)}</td><td>${esc(o.status)||'Confirmed'}</td><td>${esc(o.tracking)||'—'}</td>
@@ -356,8 +386,8 @@
       const {interest,count}=await Api.listInterest();
       setKpi('kpi-interest',count);
       el.innerHTML = interest.length
-        ? `<table><thead><tr><th>Email</th><th>Joined (EST)</th><th style="width:130px">Source</th><th style="width:140px">IP Address</th></tr></thead><tbody>${
-            interest.map(e=>`<tr><td>${esc(e.email)}</td><td>${esc(e.joinedAt)}</td><td>${esc(e.source)||'site'}</td><td>${esc(e.ip)||'—'}</td></tr>`).join('')}</tbody></table>`
+        ? `<table><thead><tr><th>Email</th><th>Joined (Local)</th><th style="width:130px">Source</th><th style="width:140px">IP Address</th></tr></thead><tbody>${
+            interest.map(e=>`<tr><td>${esc(e.email)}</td><td>${fmtTime(e.joinedAt)}</td><td>${esc(e.source)||'site'}</td><td>${esc(e.ip)||'—'}</td></tr>`).join('')}</tbody></table>`
         : '<p class="muted">No signups yet — the invite appears after a few seconds on the homepage.</p>';
     }catch(err){
       el.innerHTML = isAccessError(err) ? needKey : backendDown;

@@ -389,11 +389,11 @@ section{padding:96px 0}
 .info-block th{background:var(--cream);letter-spacing:.1em;text-transform:uppercase;font-size:.72rem;font-weight:400}
 
 /* toast */
-.toast{position:fixed;bottom:34px;left:50%;transform:translateX(-50%) translateY(140%);
+.toast{position:fixed;bottom:34px;left:50%;transform:translateX(-50%) translateY(calc(100% + 80px));
   background:var(--ink);color:var(--ivory);padding:16px 30px;font-family:var(--sans);font-size:.76rem;
   letter-spacing:.16em;text-transform:uppercase;z-index:200;transition:transform .45s cubic-bezier(.2,.9,.3,1);
-  box-shadow:var(--shadow)}
-.toast.show{transform:translateX(-50%) translateY(0)}
+  box-shadow:var(--shadow);opacity:0;pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
 
 .page-hero{text-align:center;padding:90px 0 30px}
 .page-hero .eyebrow{margin-bottom:14px}

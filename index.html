@@ -84,17 +84,15 @@
   renderHeader('home');
   applyHomeContent();   // apply any admin overrides (category words + photos)
 
-  // ---- The List invite: signed-out visitors see this near the category row,
+  // ---- The List invite: visitors see this near the More Pictures row,
   //      with a short cooldown so quick reopens do not feel repetitive. ----
   const listModal=document.getElementById('list-modal');
-  const LIST_MODAL_SEEN_KEY='cherish_list_modal_seen_at';
+  const LIST_MODAL_SEEN_KEY='cherish_list_modal_seen_at_v2';
   const LIST_MODAL_COOLDOWN_MS=60*60*1000;
   let listModalOpened=false;
   function listModalAllowed(){
     const seenAt=Number(localStorage.getItem(LIST_MODAL_SEEN_KEY) || 0);
-    return !Auth.in()
-      && !localStorage.getItem('cherish_interest_joined')
-      && Date.now()-seenAt>LIST_MODAL_COOLDOWN_MS;
+    return Date.now()-seenAt>LIST_MODAL_COOLDOWN_MS;
   }
   function openListModal(){
     if(!listModal || listModalOpened || !listModalAllowed()) return;
@@ -111,25 +109,20 @@
   document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeListModal(); });
 
   if(listModalAllowed()){
-    const trigger=document.querySelector('.fp-cats') || document.querySelector('.fp-strip');
-    if('IntersectionObserver' in window && trigger){
-      const observer=new IntersectionObserver(entries=>{
-        if(entries.some(entry=>entry.isIntersecting)){
-          openListModal();
-          observer.disconnect();
-        }
-      },{threshold:.2,rootMargin:'0px 0px -18% 0px'});
-      observer.observe(trigger);
-    }else{
-      const onScroll=()=>{
-        if(window.scrollY>window.innerHeight*.65){
-          openListModal();
-          window.removeEventListener('scroll',onScroll);
-        }
-      };
-      window.addEventListener('scroll',onScroll,{passive:true});
-      onScroll();
-    }
+    const trigger=document.querySelector('.fp-strip') || document.querySelector('.fp-cats');
+    const reachedInvitePoint=()=>{
+      if(!trigger) return window.scrollY>window.innerHeight*.65;
+      const top=trigger.getBoundingClientRect().top + window.scrollY;
+      return window.scrollY + window.innerHeight*.7 >= top;
+    };
+    const onScroll=()=>{
+      if(reachedInvitePoint()){
+        openListModal();
+        window.removeEventListener('scroll',onScroll);
+      }
+    };
+    window.addEventListener('scroll',onScroll,{passive:true});
+    onScroll();
   }
 </script>
 </body>
