@@ -259,6 +259,12 @@ async function joinList(input,source){
     input.value='';
     return true;
   }catch(err){
+    if(/409|conflict/i.test(err.message || '')){
+      localStorage.setItem('cherish_interest_joined','1');
+      toast("You're already on the list");
+      input.value='';
+      return true;
+    }
     toast(err.message.includes('fetch')?'Couldn’t reach the studio — please try again in a moment':err.message);
     return false;
   }

@@ -88,9 +88,10 @@ def gh_get_file(repo, path):
         raise
 
 
-def gh_put_file(repo, path, raw_bytes, message):
+def gh_put_file(repo, path, raw_bytes, message, sha=None):
     """Create or update a file in the repo (contents API)."""
-    _, sha = gh_get_file(repo, path)
+    if sha is None:
+        _, sha = gh_get_file(repo, path)
     payload = {"message": message, "content": base64.b64encode(raw_bytes).decode()}
     if sha:
         payload["sha"] = sha
@@ -107,25 +108,37 @@ UPLOADS_REL = "images/uploads"
 os.makedirs(os.path.join(BACKEND_DIR, "data"), exist_ok=True)
 
 
-def _load_records(filename):
+def _decode_records(raw):
+    try:
+        return json.loads(raw) if raw else []
+    except (TypeError, json.JSONDecodeError):
+        return []
+
+
+def _load_records_with_sha(filename):
     """users.json / orders.json — a JSON list, in DATA_REPO or a local file."""
     if GITHUB_TOKEN:
-        raw, _ = gh_get_file(DATA_REPO, filename)
-        return json.loads(raw) if raw else []
+        raw, sha = gh_get_file(DATA_REPO, filename)
+        return _decode_records(raw), sha
     p = os.path.join(BACKEND_DIR, "data", filename)
     if not os.path.exists(p):
-        return []
+        return [], None
     try:
         with open(p) as f:
-            return json.load(f)
+            return json.load(f), None
     except (json.JSONDecodeError, OSError):
-        return []
+        return [], None
 
 
-def _save_records(filename, records, message):
+def _load_records(filename):
+    records, _ = _load_records_with_sha(filename)
+    return records
+
+
+def _save_records(filename, records, message, sha=None):
     raw = json.dumps(records, indent=2).encode()
     if GITHUB_TOKEN:
-        gh_put_file(DATA_REPO, filename, raw, message)
+        gh_put_file(DATA_REPO, filename, raw, message, sha)
     else:
         with open(os.path.join(BACKEND_DIR, "data", filename), "wb") as f:
             f.write(raw)
@@ -160,17 +173,26 @@ def add_interest(email, source="site", ip="-", joined_at=None):
     email = (email or "").strip().lower()
     if not is_valid_email(email):
         return False
-    entries = load_interest()
-    if any(e.get("email") == email for e in entries):
-        return False
-    entries.insert(0, {
+    entry = {
         "email": email,
         "joinedAt": joined_at or now_str(),
         "source": str(source or "site")[:40],
         "ip": ip or "-",
-    })
-    save_interest(entries)
-    return True
+    }
+    for attempt in range(4):
+        entries, sha = _load_records_with_sha("interest.json")
+        if any(e.get("email") == email for e in entries):
+            return False
+        entries.insert(0, entry)
+        try:
+            _save_records("interest.json", entries, "Update interest list", sha)
+            return True
+        except urllib.error.HTTPError as e:
+            if GITHUB_TOKEN and e.code == 409 and attempt < 3:
+                time.sleep(0.25 * (attempt + 1))
+                continue
+            raise
+    return False
 
 
 def interest_with_registered_users():
