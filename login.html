@@ -23,6 +23,7 @@
   <form id="login-form">
     <div class="field"><label>Email</label><input type="email" id="li-email" required placeholder="you@email.com"></div>
     <div class="field"><label>Password</label><input type="password" id="li-pass" required placeholder="••••••••"></div>
+    <p class="form-note" style="text-align:right;margin:-8px 0 18px"><a href="#" onclick="startReset();return false;">Forgot password?</a></p>
     <button class="btn block" type="submit">Sign In</button>
     <p class="form-note">No account yet? <a href="#" onclick="switchTab('register');return false;">Sign up</a></p>
   </form>
@@ -31,6 +32,7 @@
   <form id="register-form" style="display:none">
     <div class="field"><label>Name</label><input type="text" id="rg-name" placeholder="First name"></div>
     <div class="field"><label>Email</label><input type="email" id="rg-email" required placeholder="you@email.com"></div>
+    <div class="field"><label>Password</label><input type="password" id="rg-pass" required minlength="8" placeholder="At least 8 characters"></div>
     <p class="muted" style="font-size:.78rem;margin:-10px 0 20px">We'll email a 6-digit code to verify it's really you.</p>
     <button class="btn block gold" type="submit">Send Verification Code</button>
     <p class="form-note">Already with us? <a href="#" onclick="switchTab('login');return false;">Sign in</a></p>
@@ -42,6 +44,22 @@
     <div class="field"><label>Verification Code</label><input type="text" id="rg-code" inputmode="numeric" maxlength="6" placeholder="000000" required></div>
     <button class="btn block gold" type="submit">Verify &amp; Create Account</button>
     <p class="form-note"><a href="#" onclick="backToRegister();return false;">Use a different email</a> · <a href="#" onclick="resendCode();return false;">Resend code</a></p>
+  </form>
+
+  <!-- Password reset: email -> code -> new password -->
+  <form id="reset-request-form" style="display:none">
+    <p class="muted" style="font-size:.84rem;margin-bottom:20px">Enter your account email and we'll send a 6-digit reset code.</p>
+    <div class="field"><label>Email</label><input type="email" id="rs-email" required placeholder="you@email.com"></div>
+    <button class="btn block gold" type="submit">Send Reset Code</button>
+    <p class="form-note">Remembered it? <a href="#" onclick="switchTab('login');return false;">Sign in</a></p>
+  </form>
+
+  <form id="reset-verify-form" style="display:none">
+    <p class="muted" style="font-size:.84rem;margin-bottom:20px">Enter the code sent to <b id="reset-email-label"></b>, then choose a new password.</p>
+    <div class="field"><label>Reset Code</label><input type="text" id="rs-code" inputmode="numeric" maxlength="6" placeholder="000000" required></div>
+    <div class="field"><label>New Password</label><input type="password" id="rs-pass" required minlength="8" placeholder="At least 8 characters"></div>
+    <button class="btn block gold" type="submit">Reset Password</button>
+    <p class="form-note"><a href="#" onclick="startReset(pendingResetEmail);return false;">Use a different email</a> · <a href="#" onclick="resendResetCode();return false;">Resend code</a></p>
   </form>
 </div>
 
@@ -56,6 +74,8 @@
     document.getElementById('login-form').style.display   = t==='login'?'block':'none';
     document.getElementById('register-form').style.display= t==='register'?'block':'none';
     document.getElementById('verify-form').style.display  = 'none';
+    document.getElementById('reset-request-form').style.display = 'none';
+    document.getElementById('reset-verify-form').style.display = 'none';
   };
   document.querySelectorAll('.auth-tab').forEach(b=>b.addEventListener('click',()=>switchTab(b.dataset.tab)));
   // allow ?tab=register to open directly on the register form
@@ -64,10 +84,11 @@
   document.getElementById('login-form').onsubmit=async e=>{
     e.preventDefault();
     const email=document.getElementById('li-email').value.trim();
+    const password=document.getElementById('li-pass').value;
     const btn=e.target.querySelector('button[type=submit]');
     btn.disabled=true; btn.textContent='Signing in…';
     try{
-      const {user}=await Api.login(email);   // backend records every login
+      const {user}=await Api.login(email,password);   // backend records every login
       Auth.login(user.email,user.name);
       toast('Welcome back'); setTimeout(()=>location.href=next,600);
     }catch(err){
@@ -77,6 +98,9 @@
         toast(err.message);
         document.getElementById('rg-email').value=email;
         setTimeout(()=>switchTab('register'),700);
+      }else if(/reset your password/i.test(err.message)){
+        toast(err.message);
+        setTimeout(()=>startReset(email),700);
       }else{ toast(err.message); }
     }finally{ btn.disabled=false; btn.textContent='Sign In'; }
   };
@@ -90,11 +114,13 @@
     catch(err){ toast(err.message); }
   };
 
-  let pendingEmail='', pendingName='';
+  let pendingEmail='', pendingName='', pendingPassword='', pendingResetEmail='';
   document.getElementById('register-form').onsubmit=async e=>{
     e.preventDefault();
     pendingEmail=document.getElementById('rg-email').value.trim();
     pendingName=document.getElementById('rg-name').value.trim();
+    pendingPassword=document.getElementById('rg-pass').value;
+    if(pendingPassword.length<8){ toast('Password must be at least 8 characters'); return; }
     const btn=e.target.querySelector('button[type=submit]');
     btn.disabled=true; btn.textContent='Sending…';
     try{
@@ -117,11 +143,58 @@
     const btn=e.target.querySelector('button[type=submit]');
     btn.disabled=true; btn.textContent='Verifying…';
     try{
-      const {user}=await Api.verifyCode(pendingEmail,code,pendingName);
+      const {user}=await Api.verifyCode(pendingEmail,code,pendingName,pendingPassword);
       Auth.login(user.email,user.name);
       toast('Account created'); setTimeout(()=>location.href=next,600);
     }catch(err){ toast(err.message); }
     finally{ btn.disabled=false; btn.textContent='Verify & Create Account'; }
+  };
+
+  window.startReset=(email='')=>{
+    document.querySelectorAll('.auth-tab').forEach(x=>x.classList.remove('active'));
+    document.getElementById('login-form').style.display='none';
+    document.getElementById('register-form').style.display='none';
+    document.getElementById('verify-form').style.display='none';
+    document.getElementById('reset-verify-form').style.display='none';
+    document.getElementById('reset-request-form').style.display='block';
+    document.getElementById('rs-email').value=email || document.getElementById('li-email').value.trim();
+    setTimeout(()=>document.getElementById('rs-email').focus(),80);
+  };
+
+  document.getElementById('reset-request-form').onsubmit=async e=>{
+    e.preventDefault();
+    pendingResetEmail=document.getElementById('rs-email').value.trim();
+    const btn=e.target.querySelector('button[type=submit]');
+    btn.disabled=true; btn.textContent='Sending…';
+    try{
+      await Api.requestPasswordReset(pendingResetEmail);
+      document.getElementById('reset-email-label').textContent=pendingResetEmail;
+      document.getElementById('reset-request-form').style.display='none';
+      document.getElementById('reset-verify-form').style.display='block';
+      document.getElementById('rs-code').focus();
+      toast('Reset code sent — check your email');
+    }catch(err){ toast(err.message); }
+    finally{ btn.disabled=false; btn.textContent='Send Reset Code'; }
+  };
+
+  window.resendResetCode=async()=>{
+    try{ await Api.requestPasswordReset(pendingResetEmail); toast('New reset code sent — check your email'); }
+    catch(err){ toast(err.message); }
+  };
+
+  document.getElementById('reset-verify-form').onsubmit=async e=>{
+    e.preventDefault();
+    const code=document.getElementById('rs-code').value.trim();
+    const password=document.getElementById('rs-pass').value;
+    if(password.length<8){ toast('Password must be at least 8 characters'); return; }
+    const btn=e.target.querySelector('button[type=submit]');
+    btn.disabled=true; btn.textContent='Resetting…';
+    try{
+      const {user}=await Api.resetPassword(pendingResetEmail,code,password);
+      Auth.login(user.email,user.name);
+      toast('Password reset'); setTimeout(()=>location.href=next,600);
+    }catch(err){ toast(err.message); }
+    finally{ btn.disabled=false; btn.textContent='Reset Password'; }
   };
 </script>
 </body>

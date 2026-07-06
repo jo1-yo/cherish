@@ -26,7 +26,7 @@ Configuration is all environment variables (sane local defaults):
 
 Run locally:  python3 backend/server.py [port]
 """
-import base64, datetime, json, os, random, re, string, sys, time, urllib.error, urllib.request
+import base64, datetime, hashlib, hmac, json, os, random, re, string, sys, time, urllib.error, urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 try:
@@ -235,6 +235,30 @@ def is_valid_email(email):
     return bool(re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email or ""))
 
 
+def is_valid_password(password):
+    return len(password or "") >= 8
+
+
+def hash_password(password, salt=None):
+    salt = salt or base64.b64encode(os.urandom(16)).decode()
+    digest = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 120000)
+    return "pbkdf2_sha256${}${}".format(salt, base64.b64encode(digest).decode())
+
+
+def verify_password(password, stored):
+    try:
+        algo, salt, _ = str(stored or "").split("$", 2)
+    except ValueError:
+        return False
+    if algo != "pbkdf2_sha256":
+        return False
+    return hmac.compare_digest(hash_password(password, salt), stored)
+
+
+def public_user(user):
+    return {k: v for k, v in dict(user or {}).items() if k != "passwordHash"}
+
+
 def send_code_email(email, code):
     """Email the code via Resend; without an API key, print it to the log."""
     if not RESEND_API_KEY:
@@ -327,7 +351,7 @@ class Handler(BaseHTTPRequestHandler):
             if not self._is_admin():
                 return self._send_json(401, {"ok": False, "error": "Access denied"})
             users = load_users()
-            return self._send_json(200, {"ok": True, "count": len(users), "users": users})
+            return self._send_json(200, {"ok": True, "count": len(users), "users": [public_user(u) for u in users]})
         if self.path == "/api/admin/orders":
             if not self._is_admin():
                 return self._send_json(401, {"ok": False, "error": "Access denied"})
@@ -345,6 +369,8 @@ class Handler(BaseHTTPRequestHandler):
             "/api/auth/request-code": self._handle_request_code,
             "/api/auth/verify-code": self._handle_verify_code,
             "/api/auth/login": self._handle_login,
+            "/api/auth/request-reset": self._handle_request_reset,
+            "/api/auth/reset-password": self._handle_reset_password,
             "/api/orders": self._handle_place_order,
             "/api/interest": self._handle_join_interest,
             "/api/admin/verify-key": self._handle_verify_key,
@@ -367,7 +393,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._send_json(400, {"ok": False, "error": "Please enter a valid email address"})
 
         code = "".join(random.choices(string.digits, k=6))
-        _pending_codes[email] = {"code": code, "expires": time.time() + CODE_TTL_SECONDS}
+        _pending_codes[email] = {"code": code, "expires": time.time() + CODE_TTL_SECONDS, "purpose": "register"}
         try:
             send_code_email(email, code)
         except Exception as e:                         # noqa: BLE001
@@ -384,15 +410,20 @@ class Handler(BaseHTTPRequestHandler):
         email = (body.get("email") or "").strip().lower()
         code = (body.get("code") or "").strip()
         name = (body.get("name") or "").strip()
+        password = (body.get("password") or "").strip()
 
         pending = _pending_codes.get(email)
         if not pending:
             return self._send_json(400, {"ok": False, "error": "Request a new code first"})
+        if pending.get("purpose") not in ("register", None):
+            return self._send_json(400, {"ok": False, "error": "Request a new sign-up code first"})
         if time.time() > pending["expires"]:
             del _pending_codes[email]
             return self._send_json(400, {"ok": False, "error": "That code expired — request a new one"})
         if code != pending["code"]:
             return self._send_json(400, {"ok": False, "error": "Incorrect code"})
+        if not is_valid_password(password):
+            return self._send_json(400, {"ok": False, "error": "Password must be at least 8 characters"})
 
         del _pending_codes[email]
         users = load_users()
@@ -400,12 +431,14 @@ class Handler(BaseHTTPRequestHandler):
         if existing:
             if name:
                 existing["name"] = name
+            existing["passwordHash"] = hash_password(password)
             user = existing
         else:
             user = {
                 "id": str(int(time.time() * 1000)),
                 "email": email,
                 "name": name or email.split("@")[0],
+                "passwordHash": hash_password(password),
                 "registeredAt": now_str(),
                 "lastLoginAt": now_str(),
                 "loginCount": 1,
@@ -413,23 +446,82 @@ class Handler(BaseHTTPRequestHandler):
             users.append(user)
         save_users(users)
         add_interest(email, "registered-user", self._client_ip(), user.get("registeredAt") or now_str())
-        return self._send_json(200, {"ok": True, "user": user})
+        return self._send_json(200, {"ok": True, "user": public_user(user)})
 
     def _handle_login(self):
+        body = self._read_json_body()
+        email = (body.get("email") or "").strip().lower()
+        password = (body.get("password") or "").strip()
+        if not is_valid_email(email):
+            return self._send_json(400, {"ok": False, "error": "Please enter a valid email address"})
+        if not password:
+            return self._send_json(400, {"ok": False, "error": "Please enter your password"})
+
+        users = load_users()
+        user = next((u for u in users if u["email"] == email), None)
+        if not user:
+            return self._send_json(404, {"ok": False, "error": "No account for this email — please sign up first"})
+        if not user.get("passwordHash"):
+            return self._send_json(409, {"ok": False, "error": "Please reset your password to finish signing in"})
+        if not verify_password(password, user.get("passwordHash")):
+            return self._send_json(401, {"ok": False, "error": "Incorrect email or password"})
+
+        user["lastLoginAt"] = now_str()
+        user["loginCount"] = int(user.get("loginCount", 0)) + 1
+        save_users(users)
+        return self._send_json(200, {"ok": True, "user": public_user(user)})
+
+    def _handle_request_reset(self):
         body = self._read_json_body()
         email = (body.get("email") or "").strip().lower()
         if not is_valid_email(email):
             return self._send_json(400, {"ok": False, "error": "Please enter a valid email address"})
 
         users = load_users()
+        if not any(u.get("email") == email for u in users):
+            return self._send_json(404, {"ok": False, "error": "No account for this email — please sign up first"})
+
+        code = "".join(random.choices(string.digits, k=6))
+        _pending_codes[email] = {"code": code, "expires": time.time() + CODE_TTL_SECONDS, "purpose": "reset"}
+        try:
+            send_code_email(email, code)
+        except Exception as e:                         # noqa: BLE001
+            detail = str(e)
+            print(f"[email] FAILED to send password reset to {email}: {detail} — code is {code}")
+            return self._send_json(502, {"ok": False, "error": f"Couldn't send the email: {detail}"})
+        return self._send_json(200, {"ok": True, "message": "Password reset code sent"})
+
+    def _handle_reset_password(self):
+        body = self._read_json_body()
+        email = (body.get("email") or "").strip().lower()
+        code = (body.get("code") or "").strip()
+        password = (body.get("password") or "").strip()
+        if not is_valid_email(email):
+            return self._send_json(400, {"ok": False, "error": "Please enter a valid email address"})
+        if not is_valid_password(password):
+            return self._send_json(400, {"ok": False, "error": "Password must be at least 8 characters"})
+
+        pending = _pending_codes.get(email)
+        if not pending or pending.get("purpose") != "reset":
+            return self._send_json(400, {"ok": False, "error": "Request a reset code first"})
+        if time.time() > pending["expires"]:
+            del _pending_codes[email]
+            return self._send_json(400, {"ok": False, "error": "That code expired — request a new one"})
+        if code != pending["code"]:
+            return self._send_json(400, {"ok": False, "error": "Incorrect code"})
+
+        users = load_users()
         user = next((u for u in users if u["email"] == email), None)
         if not user:
             return self._send_json(404, {"ok": False, "error": "No account for this email — please sign up first"})
 
+        del _pending_codes[email]
+        user["passwordHash"] = hash_password(password)
         user["lastLoginAt"] = now_str()
         user["loginCount"] = int(user.get("loginCount", 0)) + 1
         save_users(users)
-        return self._send_json(200, {"ok": True, "user": user})
+        add_interest(email, "registered-user", self._client_ip(), user.get("registeredAt") or now_str())
+        return self._send_json(200, {"ok": True, "user": public_user(user)})
 
     # ---- orders ----
     def _handle_place_order(self):

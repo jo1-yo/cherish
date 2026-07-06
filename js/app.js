@@ -34,11 +34,17 @@ const Api = {
   async requestCode(email){
     return Api._post('/api/auth/request-code', {email});
   },
-  async verifyCode(email,code,name){
-    return Api._post('/api/auth/verify-code', {email,code,name});
+  async verifyCode(email,code,name,password){
+    return Api._post('/api/auth/verify-code', {email,code,name,password});
   },
-  async login(email){
-    return Api._post('/api/auth/login', {email});
+  async login(email,password){
+    return Api._post('/api/auth/login', {email,password});
+  },
+  async requestPasswordReset(email){
+    return Api._post('/api/auth/request-reset', {email});
+  },
+  async resetPassword(email,code,password){
+    return Api._post('/api/auth/reset-password', {email,code,password});
   },
   async placeOrder(order){
     return Api._post('/api/orders', order);
