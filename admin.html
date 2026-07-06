@@ -374,8 +374,19 @@
     if(document.getElementById('p-interest').classList.contains('active')) loadInterest();
   }, 5000);
 
-  // auto-unlock for a session that already entered the passcode
-  if(sessionStorage.getItem('cherish_admin')==='1') show();
+  // auto-unlock only if the saved password is still valid
+  async function restoreAdmin(){
+    const key=sessionStorage.getItem('cherish_admin_key');
+    if(sessionStorage.getItem('cherish_admin')!=='1' || !key) return;
+    try{
+      await Api.verifyAdminKey(key);
+      show();
+    }catch(err){
+      sessionStorage.removeItem('cherish_admin');
+      sessionStorage.removeItem('cherish_admin_key');
+    }
+  }
+  restoreAdmin();
 </script>
 </body>
 </html>
