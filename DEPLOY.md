@@ -19,7 +19,7 @@
 1. https://render.com → **Sign in with GitHub**(用 jo1-yo 登录)
 2. **New +** → **Blueprint** → 选 `jo1-yo/cherish` 仓库(它会自动读到 render.yaml)
 3. 填环境变量:
-   - `ADMIN_KEY` — 你自己定一个后台密码(别再用 cherish)
+   - `ADMIN_KEY` — 后台密码
    - `GITHUB_TOKEN` — 第一步的 token
    - `RESEND_API_KEY` — 第三步拿到后再填也行(没填时验证码打在 Render Logs 里)
 4. **Apply** → 等部署完成 → 打开 `https://cherishthestudio-backend.onrender.com/api/health` 应返回 ok

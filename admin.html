@@ -50,13 +50,12 @@
 </head>
 <body>
 
-<!-- simple passcode gate (prototype only — not real security) -->
+<!-- Admin gate -->
 <div id="gate" class="gate">
   <div class="adm-top" style="border:none;justify-content:center"><span class="logo">Cherish</span></div>
   <p class="eyebrow">Admin Access</p>
-  <input id="pass" type="password" placeholder="Admin key" onkeydown="if(event.key==='Enter')enter()">
+  <input id="pass" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')enter()">
   <button class="btn block" onclick="enter()">Enter Dashboard</button>
-  <p class="note" style="margin-top:20px;border:none;background:none;text-align:center">The key is verified by the backend (local default: <b>cherish</b>)</p>
 </div>
 
 <div id="app" style="display:none">
@@ -135,7 +134,7 @@
       <div class="bar"><h2>Interest List</h2>
         <div class="row-btns"><button class="mini" onclick="loadInterest()">Refresh</button></div>
       </div>
-      <p class="note">Emails collected by the homepage invite and the footer signup — live from the backend.</p>
+      <p class="note">Emails collected by account registration, homepage invites and footer signups — live from the backend.</p>
       <div id="interest-panel"><p class="muted">Loading…</p></div>
     </div>
 
@@ -154,7 +153,7 @@
 
 <script src="js/app.js"></script>
 <script>
-  // ---- gate (key is checked by the backend, and reused for admin API calls) ----
+  // ---- gate (password is checked by the backend, and reused for admin API calls) ----
   async function enter(){
     const key=document.getElementById('pass').value.trim();
     if(!key) return;
@@ -314,7 +313,8 @@
 
   // ---- registered users + orders (real backend) ----
   const backendDown=`<p class="note" style="border-left-color:#b01e17">Couldn't reach the backend — check that it's running, then click Refresh.</p>`;
-  const needKey=`<p class="note">Enter the dashboard first — this list needs your admin key.</p>`;
+  const needKey=`<p class="note">Enter the dashboard first.</p>`;
+  const isAccessError=err=>/access denied|admin key/i.test((err&&err.message)||'');
   const setKpi=(id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
 
   window.loadUsers=async()=>{
@@ -327,7 +327,7 @@
             users.map(u=>`<tr><td>${esc(u.name)}</td><td>${esc(u.email)}</td><td>${esc(u.registeredAt)}</td><td>${esc(u.lastLoginAt)||'—'}</td><td>${u.loginCount||0}</td></tr>`).join('')}</tbody></table>`
         : '<p class="muted">No one has signed up yet — try it at <a href="login.html?tab=register" class="link-underline">login.html</a>.</p>';
     }catch(err){
-      el.innerHTML = /admin key/i.test(err.message) ? needKey : backendDown;
+      el.innerHTML = isAccessError(err) ? needKey : backendDown;
     }
   };
   window.loadOrders=async()=>{
@@ -347,7 +347,7 @@
             </tr>`).join('')}</tbody></table>`
         : '<p class="muted">No orders yet.</p>';
     }catch(err){
-      el.innerHTML = /admin key/i.test(err.message) ? needKey : backendDown;
+      el.innerHTML = isAccessError(err) ? needKey : backendDown;
     }
   };
   window.loadInterest=async()=>{
@@ -360,7 +360,7 @@
             interest.map(e=>`<tr><td>${esc(e.email)}</td><td>${esc(e.joinedAt)}</td><td>${esc(e.source)||'site'}</td><td>${esc(e.ip)||'—'}</td></tr>`).join('')}</tbody></table>`
         : '<p class="muted">No signups yet — the invite appears after a few seconds on the homepage.</p>';
     }catch(err){
-      el.innerHTML = /admin key/i.test(err.message) ? needKey : backendDown;
+      el.innerHTML = isAccessError(err) ? needKey : backendDown;
     }
   };
   document.querySelector('.adm-tab[data-p="users"]').addEventListener('click', loadUsers);

@@ -45,8 +45,7 @@
     </div>
     <div class="strip-row">
       <div class="strip-slot filled"><img data-img="more-01" src="images/more-01.jpg" alt="Cherish — black lace midi skirt with red top-handle bag"></div>
-      <div class="strip-slot filled"><img data-img="more-02" src="images/more-02.jpg" alt="Cherish — high-rise floral sequin skirt"></div>
-      <div class="strip-slot filled"><img data-img="more-03" src="images/more-03.jpg" alt="Cherish — pink sequin mini skirt with tailored coat"></div>
+      <div class="strip-slot filled p3-zoom"><img data-img="more-03" src="images/more-03.jpg" alt="Cherish — pink sequin mini skirt with tailored coat"></div>
       <div class="strip-slot filled"><img data-img="more-04" src="images/more-04.jpg" alt="Cherish — the collection styled two ways"></div>
       <div class="strip-slot filled"><img data-img="more-05" src="images/more-05.jpg" alt="Cherish — low-rise floral sequin skirt"></div>
     </div>
@@ -72,11 +71,11 @@
 <div class="list-modal" id="list-modal" role="dialog" aria-modal="true" aria-labelledby="list-modal-title">
   <div class="card">
     <button class="close" aria-label="Close" onclick="closeListModal()">&times;</button>
-    <h3 id="list-modal-title">JOIN THE LIST</h3>
-    <p class="email-list-copy">Welcome to Cherish. Where we turn scraps into unique garments.<br><br>Coming soon ...<br><br>Join us for our first launch and enter your email below to be added to our email list.</p>
+    <h3 id="list-modal-title">THE CHERISH LIST</h3>
+    <p class="email-list-copy">Join the list for first access to launches, studio notes, and one-of-a-kind pieces.</p>
     <input type="email" id="list-email" placeholder="Email address" autocomplete="email"
       onkeydown="if(event.key==='Enter')joinListModal()">
-    <button class="btn gold block" onclick="joinListModal()">Subscribe</button>
+    <button class="btn gold block" onclick="joinListModal()">Join the List</button>
   </div>
 </div>
 
@@ -85,22 +84,52 @@
   renderHeader('home');
   applyHomeContent();   // apply any admin overrides (category words + photos)
 
-  // ---- The List invite: every visit while the visitor is signed out and not
-  //      yet subscribed; shows after 3 seconds on the homepage ----
+  // ---- The List invite: signed-out visitors see this near the category row,
+  //      with a short cooldown so quick reopens do not feel repetitive. ----
   const listModal=document.getElementById('list-modal');
-  function openListModal(){
-    listModal.classList.add('open');
-    setTimeout(()=>document.getElementById('list-email').focus(),450);
+  const LIST_MODAL_SEEN_KEY='cherish_list_modal_seen_at';
+  const LIST_MODAL_COOLDOWN_MS=60*60*1000;
+  let listModalOpened=false;
+  function listModalAllowed(){
+    const seenAt=Number(localStorage.getItem(LIST_MODAL_SEEN_KEY) || 0);
+    return !Auth.in()
+      && !localStorage.getItem('cherish_interest_joined')
+      && Date.now()-seenAt>LIST_MODAL_COOLDOWN_MS;
   }
-  window.closeListModal=()=>listModal.classList.remove('open');
+  function openListModal(){
+    if(!listModal || listModalOpened || !listModalAllowed()) return;
+    listModalOpened=true;
+    localStorage.setItem(LIST_MODAL_SEEN_KEY,String(Date.now()));
+    listModal.classList.add('open');
+    setTimeout(()=>document.getElementById('list-email')?.focus(),450);
+  }
+  window.closeListModal=()=>listModal?.classList.remove('open');
   window.joinListModal=async()=>{
     if(await joinList(document.getElementById('list-email'),'homepage')) closeListModal();
   };
   listModal.addEventListener('click',e=>{ if(e.target===listModal) closeListModal(); });
   document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeListModal(); });
 
-  if(!Auth.in() && !localStorage.getItem('cherish_interest_joined')){
-    setTimeout(openListModal, 3000);
+  if(listModalAllowed()){
+    const trigger=document.querySelector('.fp-cats') || document.querySelector('.fp-strip');
+    if('IntersectionObserver' in window && trigger){
+      const observer=new IntersectionObserver(entries=>{
+        if(entries.some(entry=>entry.isIntersecting)){
+          openListModal();
+          observer.disconnect();
+        }
+      },{threshold:.2,rootMargin:'0px 0px -18% 0px'});
+      observer.observe(trigger);
+    }else{
+      const onScroll=()=>{
+        if(window.scrollY>window.innerHeight*.65){
+          openListModal();
+          window.removeEventListener('scroll',onScroll);
+        }
+      };
+      window.addEventListener('scroll',onScroll,{passive:true});
+      onScroll();
+    }
   }
 </script>
 </body>

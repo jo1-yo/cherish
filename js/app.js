@@ -24,13 +24,12 @@ try{ const _c=JSON.parse(localStorage.getItem('cherish_catalog')); if(Array.isAr
 const fmt = n => '$' + Number(n).toFixed(0);
 
 /* ---------- Backend API (see backend/server.py) ----------
-   Signup (email verification code), sign-in and the admin dashboard all
-   talk to this. Local dev uses the local backend; the deployed site talks
-   to the Render deployment. */
-const API_BASE = localStorage.getItem('cherish_api_base') ||   // console override, no redeploy needed
-  (['localhost','127.0.0.1'].includes(location.hostname)
-    ? 'http://localhost:8082'
-    : 'https://cherishthestudio-backend.onrender.com');
+   Signup emails need the hosted backend because local dev usually has no
+   Resend key. A console override still works for testing another backend. */
+const savedApiBase = localStorage.getItem('cherish_api_base');
+const API_BASE = savedApiBase && !/^https?:\/\/(localhost|127\.0\.0\.1):8082\/?$/.test(savedApiBase)
+  ? savedApiBase.replace(/\/$/, '')
+  : 'https://cherishthestudio-backend.onrender.com';
 const Api = {
   async requestCode(email){
     return Api._post('/api/auth/request-code', {email});
@@ -117,12 +116,12 @@ const Fav = {
 /* ---------- Icons ---------- */
 const I = {
   search:'<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>',
-  heart:'<svg viewBox="0 0 24 24"><path d="M12 20.5l-1.4-1.3C5.4 14.5 2 11.4 2 7.6 2 4.9 4.1 3 6.7 3c1.7 0 3.3.8 4.3 2.1C12 3.8 13.6 3 15.3 3 17.9 3 20 4.9 20 7.6c0 3.8-3.4 6.9-8.6 11.6z"/></svg>',
+  heart:'<svg viewBox="0 0 24 24"><path d="M12 21.1C7.35 16.95 4 13.88 4 10.28 4 7.62 6.08 5.6 8.65 5.6c1.42 0 2.68.65 3.35 1.72.67-1.07 1.93-1.72 3.35-1.72 2.57 0 4.65 2.02 4.65 4.68 0 3.6-3.35 6.67-8 10.82z"/></svg>',
   bag:'<svg viewBox="0 0 24 24"><path d="M3 4h2l2.2 10.2a1 1 0 0 0 1 .8h7.6a1 1 0 0 0 1-.8L19.5 7H6"/><circle cx="9.5" cy="19" r="1.3"/><circle cx="16.5" cy="19" r="1.3"/></svg>',
   user:'<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg>',
   menu:'<svg viewBox="0 0 24 24"><line x1="3" y1="7" x2="21" y2="7"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="17" x2="21" y2="17"/></svg>',
   instagram:'<svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1.1" fill="currentColor" stroke="none"/></svg>',
-  tiktok:'<svg viewBox="0 0 24 24"><path d="M14 3v11.15a4.15 4.15 0 1 1-4.15-4.15c.42 0 .82.06 1.15.18v2.78a1.65 1.65 0 1 0 1.15 1.57V3h2.63c.36 2.24 1.78 3.72 4.22 4.2v2.76a7.18 7.18 0 0 1-5-2.04z"/></svg>',
+  tiktok:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4v10.2a4.15 4.15 0 1 1-3.55-4.1"/><path d="M14 4c.38 2.7 2.2 4.55 5 4.95"/><path d="M19 8.95v3.05"/></svg>',
 };
 
 /* Instagram handle for the brand */

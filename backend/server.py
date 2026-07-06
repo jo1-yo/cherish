@@ -12,7 +12,7 @@ What goes through here:
 
 Configuration is all environment variables (sane local defaults):
   PORT              port to listen on (Render injects this; local default 8082)
-  ADMIN_KEY         admin passcode for the dashboard + admin API (default "cherish")
+  ADMIN_KEY         admin passcode for the dashboard + admin API (default "Cherish")
   RESEND_API_KEY    if set, verification codes are emailed via resend.com;
                     if unset, codes are printed to this log (local dev)
   EMAIL_FROM        sender, e.g. "Cherish <hello@cherishthestudio.com>"
@@ -45,7 +45,9 @@ BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
 SITE_DIR = os.path.dirname(BACKEND_DIR)
 
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get("PORT", 8082))
-ADMIN_KEY = os.environ.get("ADMIN_KEY", "cherish")
+ADMIN_KEY = (os.environ.get("ADMIN_KEY", "").strip() or "Cherish")
+if ADMIN_KEY.lower() == "cherish":
+    ADMIN_KEY = "Cherish"
 RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 EMAIL_FROM = os.environ.get("EMAIL_FROM") or "Cherish <hello@cherishthestudio.com>"
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
@@ -151,6 +153,45 @@ def load_interest():
 
 def save_interest(entries):
     _save_records("interest.json", entries, "Update interest list")
+
+
+def add_interest(email, source="site", ip="-", joined_at=None):
+    """Add an email to the marketing list once, preserving the first source."""
+    email = (email or "").strip().lower()
+    if not is_valid_email(email):
+        return False
+    entries = load_interest()
+    if any(e.get("email") == email for e in entries):
+        return False
+    entries.insert(0, {
+        "email": email,
+        "joinedAt": joined_at or now_str(),
+        "source": str(source or "site")[:40],
+        "ip": ip or "-",
+    })
+    save_interest(entries)
+    return True
+
+
+def interest_with_registered_users():
+    """Admin view guarantee: every registered user also appears in Interest List."""
+    entries = load_interest()
+    seen = {str(e.get("email", "")).strip().lower() for e in entries}
+    changed = False
+    for user in load_users():
+        email = str(user.get("email", "")).strip().lower()
+        if is_valid_email(email) and email not in seen:
+            entries.insert(0, {
+                "email": email,
+                "joinedAt": user.get("registeredAt") or now_str(),
+                "source": "registered-user",
+                "ip": "-",
+            })
+            seen.add(email)
+            changed = True
+    if changed:
+        save_interest(entries)
+    return entries
 
 
 def load_content():
@@ -284,18 +325,18 @@ class Handler(BaseHTTPRequestHandler):
             return self._send_json(200, {"ok": True, "content": load_content()})
         if self.path == "/api/admin/users":
             if not self._is_admin():
-                return self._send_json(401, {"ok": False, "error": "Wrong admin key"})
+                return self._send_json(401, {"ok": False, "error": "Access denied"})
             users = load_users()
             return self._send_json(200, {"ok": True, "count": len(users), "users": users})
         if self.path == "/api/admin/orders":
             if not self._is_admin():
-                return self._send_json(401, {"ok": False, "error": "Wrong admin key"})
+                return self._send_json(401, {"ok": False, "error": "Access denied"})
             orders = load_orders()
             return self._send_json(200, {"ok": True, "count": len(orders), "orders": orders})
         if self.path == "/api/admin/interest":
             if not self._is_admin():
-                return self._send_json(401, {"ok": False, "error": "Wrong admin key"})
-            entries = load_interest()
+                return self._send_json(401, {"ok": False, "error": "Access denied"})
+            entries = interest_with_registered_users()
             return self._send_json(200, {"ok": True, "count": len(entries), "interest": entries})
         self._send_json(404, {"ok": False, "error": "not found"})
 
@@ -371,6 +412,7 @@ class Handler(BaseHTTPRequestHandler):
             }
             users.append(user)
         save_users(users)
+        add_interest(email, "registered-user", self._client_ip(), user.get("registeredAt") or now_str())
         return self._send_json(200, {"ok": True, "user": user})
 
     def _handle_login(self):
@@ -453,18 +495,16 @@ class Handler(BaseHTTPRequestHandler):
             return self._send_json(400, {"ok": False, "error": "Please enter a valid email address"})
         source = str(body.get("source") or "site")[:40]
 
-        entries = load_interest()
-        if any(e.get("email") == email for e in entries):
+        joined = add_interest(email, source, self._client_ip())
+        if not joined:
             return self._send_json(200, {"ok": True, "already": True})
-        entries.insert(0, {"email": email, "joinedAt": now_str(), "source": source, "ip": self._client_ip()})
-        save_interest(entries)
         print(f"[interest] {email} joined via {source}")
         return self._send_json(200, {"ok": True, "already": False})
 
     # ---- admin ----
     def _handle_verify_key(self):
         if not self._is_admin():
-            return self._send_json(401, {"ok": False, "error": "Wrong admin key"})
+            return self._send_json(401, {"ok": False, "error": "Access denied"})
         return self._send_json(200, {"ok": True})
 
     def _handle_save_content(self):
@@ -473,7 +513,7 @@ class Handler(BaseHTTPRequestHandler):
         None means "reset that section to defaults". Uploaded images are
         stored as real files; content keeps only their paths."""
         if not self._is_admin():
-            return self._send_json(401, {"ok": False, "error": "Wrong admin key"})
+            return self._send_json(401, {"ok": False, "error": "Access denied"})
         body = self._read_json_body()
         content = load_content()
 
