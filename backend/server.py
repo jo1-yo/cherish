@@ -26,8 +26,14 @@ Configuration is all environment variables (sane local defaults):
 
 Run locally:  python3 backend/server.py [port]
 """
-import base64, json, os, random, re, string, sys, time, urllib.error, urllib.request
+import base64, datetime, json, os, random, re, string, sys, time, urllib.error, urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+try:
+    from zoneinfo import ZoneInfo
+    NY_TZ = ZoneInfo("America/New_York")
+except Exception:                                      # no tzdata on the host
+    NY_TZ = datetime.timezone(datetime.timedelta(hours=-5), "EST")
 
 # line-buffer stdout so verification codes show up in Render/log files immediately
 try:
@@ -52,7 +58,8 @@ _pending_codes = {}
 
 
 def now_str():
-    return time.strftime("%Y-%m-%d %H:%M:%S")
+    """New York time — all timestamps the admin dashboard shows."""
+    return datetime.datetime.now(NY_TZ).strftime("%Y-%m-%d %H:%M:%S")
 
 
 # ---------------------------------------------------------------- GitHub API
@@ -242,6 +249,11 @@ class Handler(BaseHTTPRequestHandler):
     def _is_admin(self):
         return self.headers.get("X-Admin-Key", "") == ADMIN_KEY
 
+    def _client_ip(self):
+        """Real visitor IP — Render sits behind a proxy, so prefer X-Forwarded-For."""
+        fwd = self.headers.get("X-Forwarded-For", "")
+        return (fwd.split(",")[0].strip() if fwd else "") or self.client_address[0]
+
     def do_OPTIONS(self):
         self._send_json(204, {})
 
@@ -430,7 +442,7 @@ class Handler(BaseHTTPRequestHandler):
         entries = load_interest()
         if any(e.get("email") == email for e in entries):
             return self._send_json(200, {"ok": True, "already": True})
-        entries.insert(0, {"email": email, "joinedAt": now_str(), "source": source})
+        entries.insert(0, {"email": email, "joinedAt": now_str(), "source": source, "ip": self._client_ip()})
         save_interest(entries)
         print(f"[interest] {email} joined via {source}")
         return self._send_json(200, {"ok": True, "already": False})

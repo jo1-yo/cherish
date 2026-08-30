@@ -1,0 +1,17 @@
+[
+  {
+    "email": "waiting@example.com",
+    "joinedAt": "2026-07-05 14:25:24",
+    "source": "shop-notify"
+  },
+  {
+    "email": "visitor@example.com",
+    "joinedAt": "2026-07-05 14:11:39",
+    "source": "homepage"
+  },
+  {
+    "email": "fan@example.com",
+    "joinedAt": "2026-07-05 14:10:50",
+    "source": "homepage"
+  }
+]

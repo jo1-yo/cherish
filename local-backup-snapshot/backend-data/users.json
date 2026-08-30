@@ -1,0 +1,18 @@
+[
+  {
+    "id": "1783281026720",
+    "email": "cher@example.com",
+    "name": "Cher",
+    "registeredAt": "2026-07-05 12:50:26",
+    "lastLoginAt": "2026-07-05 12:50:26",
+    "loginCount": 2
+  },
+  {
+    "id": "1783281092915",
+    "email": "jane@test.com",
+    "name": "Jane",
+    "registeredAt": "2026-07-05 12:51:32",
+    "lastLoginAt": "2026-07-05 12:51:32",
+    "loginCount": 1
+  }
+]
